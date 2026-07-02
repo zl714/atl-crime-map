@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atlanta Crime Intelligence Map</title>
+    <meta
+      name="description"
+      content="Interactive crime intelligence map for the City of Atlanta, built on public Atlanta Police Department open data."
+    />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Leaflet -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="brand">
+          <span class="brand__mark" aria-hidden="true"></span>
+          <span class="brand__title">Atlanta Crime Intelligence Map</span>
+          <span class="brand__sub">
+            Built by Zachary LeCroy · public APD open data · not affiliated with any agency
+          </span>
+        </div>
+        <div class="header__spacer"></div>
+        <div class="header__stat">
+          <span class="num tnum" id="header-total">—</span>
+          <span class="eyebrow">Incidents loaded</span>
+        </div>
+      </header>
+
+      <!-- Intelligence panel -->
+      <aside id="panel">
+        <div class="section">
+          <div class="section__head">
+            <span class="eyebrow">In current view</span>
+          </div>
+          <div class="total">
+            <span class="num tnum" id="view-total">0</span>
+            <span class="label">incidents</span>
+          </div>
+          <div class="total__hint" id="view-hint">Pan and zoom to filter the map.</div>
+        </div>
+
+        <div class="section">
+          <div class="section__head">
+            <span class="eyebrow">Category breakdown</span>
+          </div>
+          <div id="cat-bars"></div>
+        </div>
+
+        <div class="section">
+          <div class="section__head">
+            <span class="eyebrow">7-day trend</span>
+          </div>
+          <div class="spark-wrap">
+            <div class="spark-meta">
+              <span class="num tnum" id="spark-total">0</span>
+              <span class="delta tnum" id="spark-delta"></span>
+            </div>
+            <canvas id="sparkline" width="300" height="44"></canvas>
+            <div class="spark-axis">
+              <span id="spark-start">—</span>
+              <span id="spark-end">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section__head">
+            <span class="eyebrow">Recent incidents</span>
+            <span class="eyebrow tnum" id="recent-count"></span>
+          </div>
+          <div class="recent-list" id="recent-list">
+            <div class="empty">No incidents in view.</div>
+          </div>
+        </div>
+
+        <div class="panel__footer">
+          Source:
+          <a
+            href="https://opendata.atlantapd.org/"
+            target="_blank"
+            rel="noopener"
+            >Atlanta Police Department Open Data</a
+          >
+          (NIBRS Crime Incidents). <span id="footer-range"></span> Retrieved
+          <span id="footer-retrieved">—</span>. Locations are snapped to the nearest
+          street/block by APD. Built to demonstrate crime-analysis and GIS skills; not
+          affiliated with the City of Atlanta or APD.
+        </div>
+      </aside>
+
+      <!-- Map -->
+      <div id="map">
+        <div class="controls">
+          <div class="control-group" id="cat-toggles" role="group" aria-label="Category filters"></div>
+          <div class="control-group" id="date-chips" role="group" aria-label="Date range"></div>
+          <div class="controls__spacer"></div>
+          <div class="control-group">
+            <button class="chip chip--toggle" id="heat-toggle" aria-pressed="false">
+              Heatmap
+            </button>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span class="eyebrow">Offense category</span>
+          <div class="legend-row">
+            <span class="cat-dot" style="background: var(--cat-violent)"></span> Violent
+          </div>
+          <div class="legend-row">
+            <span class="cat-dot" style="background: var(--cat-property)"></span> Property
+          </div>
+          <div class="legend-row">
+            <span class="cat-dot" style="background: var(--cat-vehicle)"></span> Vehicle
+          </div>
+          <div class="legend-row">
+            <span class="cat-dot" style="background: var(--cat-other)"></span> Other
+          </div>
+        </div>
+
+        <div id="loading">
+          <div class="spinner"></div>
+          <div class="eyebrow">Loading Atlanta incident data…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leaflet + heat plugin -->
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,651 @@
+/* Atlanta Crime Intelligence Map — LeCroy design system
+   Navy near-black, slate ramp, amber accent, tabular numbers, 4px grid. */
+
+:root {
+  --bg-base: #030712;
+  --bg-panel: #0F172A;
+  --bg-panel-2: #131C31;
+  --bg-elev: #1B2740;
+
+  --text-head: #F3F4F6;
+  --text-body: #CBD5E1;
+  --text-dim: #94A3B8;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --accent: #F59E0B;
+  --accent-dim: rgba(245, 158, 11, 0.14);
+
+  --cat-violent: #F23645;
+  --cat-property: #F59E0B;
+  --cat-vehicle: #60A5FA;
+  --cat-other: #94A3B8;
+
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+
+  --panel-w: 344px;
+  --header-h: 56px;
+
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-body);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ---------- Layout ---------- */
+#app {
+  display: grid;
+  grid-template-rows: var(--header-h) 1fr;
+  grid-template-columns: var(--panel-w) 1fr;
+  grid-template-areas:
+    "header header"
+    "panel  map";
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ---------- Header ---------- */
+header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding: 0 var(--s5);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  z-index: 1200;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.brand__mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--accent);
+  align-self: center;
+  flex: none;
+  box-shadow: 0 0 0 4px var(--accent-dim);
+}
+
+.brand__title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-head);
+  white-space: nowrap;
+}
+
+.brand__sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header__spacer {
+  flex: 1;
+}
+
+.header__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.header__stat .num {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-head);
+}
+
+.eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+/* ---------- Panel ---------- */
+#panel {
+  grid-area: panel;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.section {
+  padding: var(--s5);
+  border-bottom: 1px solid var(--border);
+}
+
+.section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s4);
+}
+
+.section__head .eyebrow {
+  color: var(--text-dim);
+}
+
+/* Big in-view total */
+.total {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+}
+
+.total .num {
+  font-size: 34px;
+  font-weight: 600;
+  color: var(--text-head);
+  letter-spacing: -0.02em;
+}
+
+.total .label {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.total__hint {
+  margin-top: var(--s2);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Category bars */
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+}
+
+.cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cat-name {
+  width: 76px;
+  flex: none;
+  color: var(--text-body);
+  text-transform: capitalize;
+}
+
+.cat-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-elev);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cat-bar__fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.35s ease;
+}
+
+.cat-count {
+  width: 52px;
+  text-align: right;
+  flex: none;
+  color: var(--text-head);
+  font-size: 13px;
+}
+
+/* Sparkline */
+.spark-wrap {
+  margin-top: var(--s2);
+}
+
+.spark-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--s3);
+}
+
+.spark-meta .num {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-head);
+}
+
+.spark-meta .delta {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+#sparkline {
+  display: block;
+  width: 100%;
+  height: 44px;
+}
+
+.spark-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--s2);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* Recent list */
+.recent-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.recent-item {
+  display: grid;
+  grid-template-columns: 3px 1fr auto;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.recent-item:last-child {
+  border-bottom: none;
+}
+
+.recent-item:hover {
+  background: var(--bg-panel-2);
+}
+
+.recent-item__stripe {
+  border-radius: 2px;
+}
+
+.recent-item__body {
+  min-width: 0;
+}
+
+.recent-item__type {
+  color: var(--text-head);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-item__meta {
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-item__date {
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.recent-item__flag {
+  display: inline-block;
+  margin-left: var(--s2);
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 15px;
+  border-radius: 3px;
+  color: var(--cat-violent);
+  border: 1px solid rgba(242, 54, 69, 0.4);
+  vertical-align: middle;
+}
+
+.empty {
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: var(--s4) 0;
+  text-align: center;
+}
+
+.panel__footer {
+  margin-top: auto;
+  padding: var(--s4) var(--s5);
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.panel__footer a {
+  color: var(--text-dim);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---------- Map ---------- */
+#map {
+  grid-area: map;
+  background: var(--bg-base);
+  position: relative;
+}
+
+/* ---------- Controls overlay (top of map) ---------- */
+.controls {
+  position: absolute;
+  top: var(--s4);
+  left: var(--s4);
+  right: var(--s4);
+  z-index: 1000;
+  display: flex;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  align-items: center;
+  pointer-events: none;
+}
+
+.control-group {
+  display: flex;
+  gap: var(--s1);
+  padding: var(--s1);
+  background: rgba(15, 23, 42, 0.86);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  pointer-events: auto;
+}
+
+.chip {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+
+.chip:hover {
+  color: var(--text-head);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--bg-elev);
+  color: var(--text-head);
+}
+
+.chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+
+.chip[aria-pressed="true"] .chip__dot {
+  opacity: 1;
+}
+
+.chip--date[aria-pressed="true"] {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.chip--toggle[aria-pressed="true"] {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.controls__spacer {
+  flex: 1;
+}
+
+/* ---------- Legend ---------- */
+.legend {
+  position: absolute;
+  bottom: var(--s5);
+  right: var(--s4);
+  z-index: 1000;
+  padding: var(--s3) var(--s4);
+  background: rgba(15, 23, 42, 0.86);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.legend .eyebrow {
+  margin-bottom: 2px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: 12px;
+  color: var(--text-body);
+}
+
+.legend-row .cat-dot {
+  width: 8px;
+  height: 8px;
+}
+
+/* ---------- Loading / overlay ---------- */
+#loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s4);
+  background: var(--bg-base);
+  color: var(--text-dim);
+  transition: opacity 0.4s ease;
+}
+
+#loading.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Leaflet overrides (dark) ---------- */
+.leaflet-container {
+  background: var(--bg-base);
+  font-family: var(--font);
+  outline: none;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(15, 23, 42, 0.9) !important;
+  color: var(--text-body) !important;
+  border-color: var(--border) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--bg-elev) !important;
+  color: var(--text-head) !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(3, 7, 18, 0.7) !important;
+  color: var(--text-dim) !important;
+  font-size: 10px !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--text-dim) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--bg-panel);
+  color: var(--text-body);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.leaflet-popup-tip {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+}
+
+.leaflet-popup-content {
+  margin: var(--s4);
+  font-family: var(--font);
+}
+
+.leaflet-popup-close-button {
+  color: var(--text-dim) !important;
+  padding: 6px 8px 0 0 !important;
+}
+
+.popup__cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.popup__cat .cat-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.popup__type {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-head);
+  margin-bottom: 8px;
+  line-height: 1.25;
+}
+
+.popup__row {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.popup__row .k {
+  color: var(--text-dim);
+  width: 62px;
+  flex: none;
+}
+
+.popup__row .v {
+  color: var(--text-body);
+}
+
+.popup__flag {
+  margin-top: 8px;
+  display: inline-block;
+  padding: 2px 7px;
+  font-size: 11px;
+  border-radius: 4px;
+  color: var(--cat-violent);
+  border: 1px solid rgba(242, 54, 69, 0.4);
+  background: rgba(242, 54, 69, 0.08);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 860px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--header-h) 40vh 1fr;
+    grid-template-areas:
+      "header"
+      "map"
+      "panel";
+  }
+
+  #panel {
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .brand__sub {
+    display: none;
+  }
+
+  .controls {
+    top: var(--s2);
+    left: var(--s2);
+    right: var(--s2);
+  }
+}
