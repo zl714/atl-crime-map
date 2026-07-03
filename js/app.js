@@ -11,15 +11,17 @@ import { MapView } from "./mapview.js";
 import { Panel } from "./panel.js";
 import { Controls } from "./controls.js";
 import { LiveLayers, timeAgo } from "./live.js";
+import { TrafficView } from "./traffic.js";
 
 const state = {
   incidents: [],
   latestTs: Date.now(),
   selectedHoodKey: null,
   selectedHoodName: null,
+  mode: "crime",
 };
 
-let mapView, panel, controls, live;
+let mapView, panel, controls, live, traffic;
 let refreshQueued = false;
 
 async function init() {
@@ -97,14 +99,108 @@ function onDataReady(payload, hoods) {
   // the core incident map.
   live = new LiveLayers(mapView.map, renderLive);
   buildLiveToggles();
+
+  // Traffic is a separate top-level mode with its own view + panel.
+  traffic = new TrafficView(mapView.map, updateLiveIndicator);
+  buildModeSwitch();
+  wireCameraToggle();
+
+  // Enter the mode from the URL hash (default crime), then start live sources.
+  const startMode = location.hash === "#traffic" ? "traffic" : "crime";
+  setMode(startMode, false);
+  if (startMode === "traffic" && new URLSearchParams(location.search).get("cam") === "1") {
+    document.getElementById("camera-toggle").click();
+  }
   live.init();
-  setInterval(renderLive, 60000); // keep "updated Xm ago" fresh
+  setInterval(() => {
+    renderLive();
+    updateLiveIndicator();
+  }, 60000);
+  window.addEventListener("hashchange", () => {
+    const m = location.hash === "#traffic" ? "traffic" : "crime";
+    if (m !== state.mode) setMode(m, false);
+  });
 }
 
-// ---------- Live layers UI ----------
+// ---------- Mode switch (Crime | Traffic) ----------
+function buildModeSwitch() {
+  document
+    .getElementById("mode-crime")
+    .addEventListener("click", () => setMode("crime"));
+  document
+    .getElementById("mode-traffic")
+    .addEventListener("click", () => setMode("traffic"));
+}
+
+function setMode(mode, push = true) {
+  state.mode = mode;
+  const crime = mode === "crime";
+
+  toggleEl("panel-crime", crime);
+  toggleEl("panel-traffic", !crime);
+  toggleEl("controls-crime", crime);
+  toggleEl("controls-traffic", !crime);
+  toggleEl("legend-crime", crime);
+  toggleEl("legend-traffic", !crime);
+
+  document.getElementById("mode-crime").setAttribute("aria-pressed", crime);
+  document.getElementById("mode-traffic").setAttribute("aria-pressed", !crime);
+  document.body.classList.toggle("mode-traffic", !crime);
+
+  mapView.setModeVisible(crime);
+  live.setActive(crime);
+  traffic.setActive(!crime);
+
+  if (push) location.hash = mode;
+  updateLiveIndicator();
+}
+
+function toggleEl(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.hidden = !show;
+}
+
+function wireCameraToggle() {
+  const btn = document.getElementById("camera-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const on = btn.getAttribute("aria-pressed") !== "true";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    traffic.toggleCameras(on);
+  });
+}
+
+// Header LIVE indicator reflects the active mode's source + freshness.
+function updateLiveIndicator() {
+  const ind = document.getElementById("live-indicator");
+  const stamp = document.getElementById("live-stamp");
+  const src = document.getElementById("live-source");
+  const active = state.mode === "crime" ? live : traffic;
+  if (src) {
+    src.textContent =
+      state.mode === "crime" ? "media reports · NWS" : "GDOT 511";
+  }
+  if (active && active.lastFetch) {
+    ind.classList.add("is-live");
+    stamp.textContent = `updated ${timeAgo(active.lastFetch)}`;
+  } else {
+    ind.classList.remove("is-live");
+    stamp.textContent = "connecting…";
+  }
+  // Traffic mode: refresh the camera-toggle count label.
+  if (state.mode === "traffic") {
+    const btn = document.getElementById("camera-toggle");
+    const c = btn && btn.querySelector(".chip__count");
+    if (c) {
+      const n = traffic.counts().cameras;
+      c.textContent = n ? String(n) : "";
+    }
+  }
+}
+
+// ---------- Crime-mode live layers UI (news + weather) ----------
 const LIVE_KINDS = [
   { id: "news", label: "News", glyph: "diamond" },
-  { id: "traffic", label: "Traffic", glyph: "triangle" },
   { id: "weather", label: "Weather", glyph: "wx" },
 ];
 
@@ -136,21 +232,12 @@ function renderLive() {
     const c = liveButtons[k.id]?.querySelector(".chip__count");
     if (c) c.textContent = counts[k.id] ? String(counts[k.id]) : "";
   }
+  updateLiveIndicator();
 
-  // Header LIVE indicator.
-  const stamp = document.getElementById("live-stamp");
-  const ind = document.getElementById("live-indicator");
-  if (live.lastFetch) {
-    ind.classList.add("is-live");
-    stamp.textContent = `updated ${timeAgo(live.lastFetch)}`;
-  } else {
-    stamp.textContent = "connecting…";
-  }
-
-  // Merged feed.
+  // Merged news + weather feed.
   const feed = live.feed();
   const host = document.getElementById("live-feed");
-  const total = counts.news + counts.traffic + counts.weather;
+  const total = counts.news + counts.weather;
   document.getElementById("live-count").textContent = total
     ? `${total} active`
     : "";
@@ -180,17 +267,13 @@ function renderLive() {
 }
 
 function tagLabel(kind) {
-  return kind === "news" ? "NEWS" : kind === "traffic" ? "TRAFFIC" : "WX";
+  return kind === "news" ? "NEWS" : "WX";
 }
 
 function liveMeta(item) {
-  if (item.kind === "news") return item.source + (item.location_text ? ` · ${item.location_text}` : "");
-  if (item.kind === "traffic") return item.road ? titleWord(item.road) : "GDOT 511";
+  if (item.kind === "news")
+    return item.source + (item.location_text ? ` · ${item.location_text}` : "");
   return item.summary || item.severity || "NWS";
-}
-
-function titleWord(s) {
-  return String(s).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function esc(s) {

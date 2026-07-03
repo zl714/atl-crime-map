@@ -1168,6 +1168,224 @@ header {
   line-height: 1.4;
 }
 
+/* ---------- Mode switch (Crime | Traffic) ---------- */
+.mode-switch {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  margin-left: var(--s4);
+}
+
+.mode-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.mode-btn:hover {
+  color: var(--text-head);
+}
+
+.mode-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: #1a1204;
+  font-weight: 600;
+}
+
+.live-indicator__source {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+  margin-left: 2px;
+}
+
+/* Controls rows (mode-swapped) */
+.controls__row {
+  display: flex;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+  padding-left: 48px; /* clear the Leaflet zoom control at top-left */
+}
+
+.controls__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-body);
+  padding: 5px 8px;
+}
+
+/* ---------- Traffic panel ---------- */
+.tr-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: 5px 0;
+}
+
+.tr-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.tr-name {
+  width: 92px;
+  flex: none;
+  color: var(--text-body);
+  font-size: 13px;
+}
+
+.tr-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-elev);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tr-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+
+.tr-count {
+  width: 34px;
+  text-align: right;
+  flex: none;
+  color: var(--text-head);
+  font-size: 13px;
+}
+
+.tr-corridor {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: var(--s3);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tr-corridor:last-child {
+  border-bottom: none;
+}
+
+.tr-corridor__count {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-head);
+  text-align: right;
+}
+
+.tr-corridor__name {
+  color: var(--text-body);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tr-corridor__major {
+  font-size: 11px;
+  color: var(--cat-violent);
+}
+
+.tr-item {
+  display: grid;
+  grid-template-columns: 3px 1fr auto;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font);
+  width: 100%;
+}
+
+.tr-item:last-child {
+  border-bottom: none;
+}
+
+.tr-item:hover {
+  background: var(--bg-panel-2);
+}
+
+.tr-item__stripe {
+  border-radius: 2px;
+}
+
+.tr-item__body {
+  min-width: 0;
+}
+
+.tr-item__title {
+  display: block;
+  font-size: 13px;
+  color: var(--text-head);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tr-item__meta {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tr-item__when {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  align-self: center;
+}
+
+.tr-closed {
+  color: var(--cat-violent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* Camera legend dot + popup snapshot */
+.cam-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3b4a63;
+  border: 1px solid #7c93b4;
+  flex: none;
+}
+
+.cam-snap {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  margin-top: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
   #app {

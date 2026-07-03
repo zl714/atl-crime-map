@@ -15,13 +15,16 @@ agency.
 
 ![Atlanta Crime Intelligence Map](docs/screenshot.png)
 
+The app has two top-level modes, switched instantly from the header (linkable as
+`#crime` / `#traffic`):
+
+_Traffic mode — live GDOT 511 roadway events with its own intel panel; optional camera layer traces the highway network:_
+
+![Traffic mode](docs/screenshot-traffic.png)
+
 | Firearm-only view | Neighborhood choropleth | Hotspot heatmap |
 | --- | --- | --- |
 | ![Firearms only](docs/screenshot-firearm.png) | ![Choropleth](docs/screenshot-choropleth.png) | ![Heatmap](docs/screenshot-heatmap.png) |
-
-_Live layers (media reports, GDOT 511 traffic, NWS alerts) with the Live panel feed:_
-
-![Live layers](docs/screenshot-live.png)
 
 ## Data
 
@@ -77,34 +80,55 @@ python3 data/fetch_incidents.py
   choropleth toggle.
 - **Incident popups** with offense, date, neighborhood, APD zone, place type,
   and a firearm-involved badge.
-- **Live situational layers** on top of the daily incident data (see below):
-  media reports (news), GDOT 511 traffic, and NWS weather alerts, each with its
-  own distinct glyph, a merged "Live" feed in the panel, per-layer toggles, and
-  a pulsing "LIVE · updated Xm ago" header indicator.
+- **Two modes** via a header segmented control (instant swap, no reload;
+  linkable as `#crime` / `#traffic`):
+  - **Crime** — everything above, plus a live **media reports** (news) layer and
+    **NWS weather alerts**, with a "Live · Atlanta" feed and a pulsing LIVE
+    header indicator.
+  - **Traffic** — a dedicated live view of GDOT 511 roadway events with its own
+    intel panel (active count, breakdown by type, worst corridors, latest-event
+    feed) and an optional traffic-camera layer. See below.
 - **Shareable views:** `?lat=&lon=&z=&heat=1&choro=1&firearm=1` deep-links to a
-  specific location/zoom and pre-set layers/filters.
+  specific location/zoom and pre-set layers/filters; `#crime` / `#traffic`
+  selects the mode; `?cam=1#traffic` opens traffic mode with cameras on.
 
-## Live layers
+## Live data (both modes)
 
 Atlanta publishes **no** real-time CAD/911 feed, so nothing here pretends to be
-one. Instead, three genuinely live public sources sit on top of the daily NIBRS
-incidents. Each uses a distinct map glyph so it is never confused with a NIBRS
-incident bubble (a filled circle):
+one. Instead, genuinely live public sources power the two modes. Each map symbol
+is a distinct glyph so nothing is confused with a NIBRS incident bubble (a
+filled circle).
+
+**Crime mode** carries two live layers:
 
 | Layer | Glyph | Source | Fetch | Cadence |
 | --- | --- | --- | --- | --- |
-| **Media reports** (news) | amber diamond | WSB-TV, 11Alive, FOX5 Atlanta RSS | server-side cron → `data/live.json`, client reads it from `raw.githubusercontent.com` | every 10 min |
-| **Traffic** | triangle (amber/red by severity) | GDOT 511 Events Public View (ArcGIS, GEMA-hosted) | client-side (CORS) | live on load + every 3 min |
-| **Weather alerts** | severity-shaded polygon | `api.weather.gov` active alerts | client-side (CORS) | live on load + every 3 min |
+| **Media reports** (news) | amber diamond | WSB-TV, 11Alive, FOX5 Atlanta RSS | cron → `data/live.json`, client reads it from `raw.githubusercontent.com` | every 10 min |
+| **Weather alerts** | severity-shaded polygon | `api.weather.gov` active alerts | client-side (CORS) | on load + every 3 min |
 
-**Why this split.** `api.weather.gov` and the GDOT 511 ArcGIS service both send
+**Traffic mode** is a separate, dedicated view (not a layer on the crime map):
+
+| Element | Glyph | Source | Fetch | Cadence |
+| --- | --- | --- | --- | --- |
+| **Roadway events** (wrecks, closures, roadwork, special events) | triangle, colored by type/severity | GDOT 511 Events Public View (GEMA ArcGIS) | client-side (CORS) | on load + every 3 min |
+| **Traffic cameras** (optional toggle) | small dot | GDOT Live Traffic Cameras (GEMA ArcGIS) | client-side (CORS) | on demand |
+
+Its intel panel shows the active-event count, a breakdown by type, the worst
+corridors by event count, and a latest-events feed with time-ago. ~2,000 metro
+cameras trace the highway network when toggled on. **Camera snapshots are not
+embedded**: GDOT hosts the snapshot images without TLS, so they would be blocked
+as mixed content on the HTTPS site — the popup links out to the live 511 camera
+instead (with a graceful `<img>` attempt that hides on failure).
+
+**Why the fetch split.** `api.weather.gov` and the GDOT ArcGIS services all send
 `Access-Control-Allow-Origin: *`, so the browser fetches them directly — always
 current. News RSS is CORS-blocked and needs geocoding, so a GitHub Action
 (`.github/workflows/live.yml`) fetches + processes it every 10 minutes and
 commits `data/live.json`. The client reads that file from
 `raw.githubusercontent.com/zl714/atl-crime-map/main/data/live.json` (CORS `*`,
 ~5-min CDN cache), so **cron updates appear without any redeploy** (falling back
-to the same-origin copy if raw is unreachable).
+to the same-origin copy if raw is unreachable). The GDOT 511 official API needs
+a developer key; this uses the keyless public GEMA-hosted ArcGIS view instead.
 
 **News processing (`data/fetch_news.py`).** Runs in CI with the Python standard
 library only — no API key. Each story is classified as an incident by a
@@ -214,7 +238,8 @@ atl-crime-map/
 │   ├── data.js         # fetch incidents + neighborhoods, name normalization
 │   ├── mapview.js      # Leaflet map, bubbles, firearm halos, heat, choropleth
 │   ├── panel.js        # in-view stats, firearm KPI, top hoods, time grid, feed
-│   ├── live.js         # live layers: news, GDOT traffic, NWS weather + feed
+│   ├── live.js         # crime-mode live layers: news + NWS weather + feed
+│   ├── traffic.js      # traffic mode: GDOT 511 events, cameras, intel panel
 │   └── controls.js     # category / firearm / date / heat / choropleth controls
 ├── data/
 │   ├── incidents.json        # preprocessed incidents (generated, daily)

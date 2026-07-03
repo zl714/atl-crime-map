@@ -1,20 +1,13 @@
-// Live situational layers: media reports (news), GDOT 511 traffic, NWS weather
-// alerts. Weather + traffic are fetched client-side (both send CORS *). News is
-// precomputed by a cron into data/live.json and read from raw.githubusercontent
-// so refreshes go live without a redeploy.
+// Crime-mode live layers: media reports (news) + NWS weather alerts.
+// News is precomputed by a cron into data/live.json and read from
+// raw.githubusercontent so refreshes go live without a redeploy. Weather is
+// fetched client-side (api.weather.gov sends CORS *). Traffic is a separate
+// top-level mode (see traffic.js), not a layer here.
 
 const NEWS_RAW =
   "https://raw.githubusercontent.com/zl714/atl-crime-map/main/data/live.json";
 const NEWS_LOCAL = "data/live.json";
 const COUNTIES_URL = "data/atl_counties.geojson";
-
-const GDOT_URL =
-  "https://services1.arcgis.com/2iUE8l8JKrP2tygQ/arcgis/rest/services/" +
-  "GDOT_511_Events_Public_View/FeatureServer/0/query" +
-  "?where=1%3D1&geometry=-85.0,33.3,-83.9,34.4&geometryType=esriGeometryEnvelope" +
-  "&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=RoadwayName,EventType," +
-  "Severity,Description,LastUpdated,IsFullClosure,DirectionOfTravel,Latitude,Longitude" +
-  "&outSR=4326&f=json";
 
 const NWS_URL = "https://api.weather.gov/alerts/active?area=GA";
 const NWS_HEADERS = { Accept: "application/geo+json" };
@@ -33,23 +26,32 @@ export class LiveLayers {
     this.onUpdate = onUpdate;
 
     map.createPane("weatherPane").style.zIndex = 345;
-    this.weatherRenderer = L.canvas({ pane: "weatherPane" });
 
     this.newsLayer = L.layerGroup();
-    this.trafficLayer = L.layerGroup();
     this.weatherLayer = L.layerGroup();
 
-    this.data = { news: [], traffic: [], weather: [] };
+    this.data = { news: [], weather: [] };
     this.counties = null;
     this.lastFetch = null;
-    this.on = { news: true, traffic: true, weather: true };
+    this.on = { news: true, weather: true };
+    this._active = false;
   }
 
   setLayer(kind, on) {
     this.on[kind] = on;
     const layer = this[`${kind}Layer`];
-    if (on) layer.addTo(this.map);
+    if (on && this._active) layer.addTo(this.map);
     else this.map.removeLayer(layer);
+    this.onUpdate();
+  }
+
+  // Called when entering/leaving crime mode.
+  setActive(active) {
+    this._active = active;
+    for (const kind of ["news", "weather"]) {
+      if (active && this.on[kind]) this[`${kind}Layer`].addTo(this.map);
+      else this.map.removeLayer(this[`${kind}Layer`]);
+    }
   }
 
   async init() {
@@ -59,22 +61,14 @@ export class LiveLayers {
     } catch {
       this.counties = null;
     }
-    for (const kind of ["news", "traffic", "weather"]) {
-      if (this.on[kind]) this[`${kind}Layer`].addTo(this.map);
-    }
+    // Map visibility is controlled by setMode()/setActive(); just load data.
     await this.refreshAll();
-    // Re-poll: traffic/weather are live sources, news is cron-backed.
     setInterval(() => this._refreshWeather(), 3 * 60000);
-    setInterval(() => this._refreshTraffic(), 3 * 60000);
     setInterval(() => this._refreshNews(), 5 * 60000);
   }
 
   async refreshAll() {
-    await Promise.allSettled([
-      this._refreshNews(),
-      this._refreshTraffic(),
-      this._refreshWeather(),
-    ]);
+    await Promise.allSettled([this._refreshNews(), this._refreshWeather()]);
     this.lastFetch = Date.now();
     this.onUpdate();
   }
@@ -86,7 +80,7 @@ export class LiveLayers {
       const res = await fetch(NEWS_RAW + "?t=" + Date.now(), { cache: "no-store" });
       if (res.ok) payload = await res.json();
     } catch {
-      /* fall through to local copy */
+      /* fall back to same-origin copy */
     }
     if (!payload) {
       try {
@@ -114,52 +108,6 @@ export class LiveLayers {
       }
     }
     this.data.news = items;
-    this.lastFetch = Date.now();
-    this.onUpdate();
-  }
-
-  // ---------- Traffic (GDOT 511) ----------
-  async _refreshTraffic() {
-    let d;
-    try {
-      const res = await fetch(GDOT_URL, { cache: "no-store" });
-      if (!res.ok) return;
-      d = await res.json();
-    } catch {
-      return;
-    }
-    this.trafficLayer.clearLayers();
-    const items = [];
-    for (const f of d.features || []) {
-      const a = f.attributes || {};
-      const lat = a.Latitude;
-      const lon = a.Longitude;
-      if (lat == null || lon == null) continue;
-      const major =
-        (a.Severity || "").toLowerCase() === "major" ||
-        String(a.IsFullClosure).toLowerCase() === "true";
-      const color = major ? "#F23645" : "#F59E0B";
-      const marker = L.marker([lat, lon], {
-        icon: triangleIcon(color),
-        keyboard: false,
-      });
-      const item = {
-        kind: "traffic",
-        type: prettyEvent(a.EventType),
-        title: `${prettyEvent(a.EventType)} — ${titleish(a.RoadwayName)}`,
-        summary: a.Description || "",
-        road: a.RoadwayName,
-        severity: a.Severity,
-        ts: a.LastUpdated || 0,
-        lat,
-        lon,
-        marker,
-      };
-      marker.bindPopup(trafficPopup(a), { closeButton: true });
-      this.trafficLayer.addLayer(marker);
-      items.push(item);
-    }
-    this.data.traffic = items;
     this.lastFetch = Date.now();
     this.onUpdate();
   }
@@ -196,45 +144,32 @@ export class LiveLayers {
         lon: null,
       };
 
+      let gj = null;
       if (f.geometry) {
-        const gj = L.geoJSON(f, {
+        gj = L.geoJSON(f, {
           pane: "weatherPane",
-          style: () => ({
-            color,
-            weight: 1,
-            fillColor: color,
-            fillOpacity: 0.14,
-          }),
+          style: () => ({ color, weight: 1, fillColor: color, fillOpacity: 0.14 }),
         });
+      } else if (this.counties) {
+        const hit = this.counties.features.filter((cf) =>
+          codes.includes(cf.properties.code)
+        );
+        if (hit.length) {
+          gj = L.geoJSON(
+            { type: "FeatureCollection", features: hit },
+            {
+              pane: "weatherPane",
+              style: () => ({ color, weight: 1, fillColor: color, fillOpacity: 0.1 }),
+            }
+          );
+        }
+      }
+      if (gj) {
         gj.bindPopup(weatherPopup(p));
         this.weatherLayer.addLayer(gj);
         const c = gj.getBounds().getCenter();
         item.lat = c.lat;
         item.lon = c.lng;
-      } else if (this.counties) {
-        // Zone-only alert: shade the affected Atlanta county polygons.
-        const hit = this.counties.features.filter((cf) =>
-          codes.includes(cf.properties.code)
-        );
-        if (hit.length) {
-          const gj = L.geoJSON(
-            { type: "FeatureCollection", features: hit },
-            {
-              pane: "weatherPane",
-              style: () => ({
-                color,
-                weight: 1,
-                fillColor: color,
-                fillOpacity: 0.1,
-              }),
-            }
-          );
-          gj.bindPopup(weatherPopup(p));
-          this.weatherLayer.addLayer(gj);
-          const c = gj.getBounds().getCenter();
-          item.lat = c.lat;
-          item.lon = c.lng;
-        }
       }
       items.push(item);
     }
@@ -243,21 +178,15 @@ export class LiveLayers {
     this.onUpdate();
   }
 
-  // Merged feed for the panel, newest first.
   feed() {
     const all = [];
     if (this.on.news) all.push(...this.data.news);
-    if (this.on.traffic) all.push(...this.data.traffic);
     if (this.on.weather) all.push(...this.data.weather);
     return all.sort((a, b) => (b.ts || 0) - (a.ts || 0));
   }
 
   counts() {
-    return {
-      news: this.data.news.length,
-      traffic: this.data.traffic.length,
-      weather: this.data.weather.length,
-    };
+    return { news: this.data.news.length, weather: this.data.weather.length };
   }
 
   focus(item) {
@@ -271,22 +200,12 @@ export class LiveLayers {
 
 // ---------- Icons ----------
 
-function diamondIcon(color) {
+export function diamondIcon(color) {
   return L.divIcon({
     className: "live-glyph",
     html: `<span class="glyph-diamond" style="background:${color}"></span>`,
     iconSize: [14, 14],
     iconAnchor: [7, 7],
-    popupAnchor: [0, -8],
-  });
-}
-
-function triangleIcon(color) {
-  return L.divIcon({
-    className: "live-glyph",
-    html: `<span class="glyph-triangle" style="border-bottom-color:${color}"></span>`,
-    iconSize: [16, 14],
-    iconAnchor: [8, 10],
     popupAnchor: [0, -8],
   });
 }
@@ -304,22 +223,6 @@ function newsPopup(n) {
     ${popRow("Source", n.source)}
     ${when ? popRow("Reported", when) : ""}
     <a class="popup__link" href="${escapeAttr(n.link)}" target="_blank" rel="noopener">Read report ↗</a>
-  `;
-}
-
-function trafficPopup(a) {
-  const when = a.LastUpdated ? timeAgo(a.LastUpdated) : "";
-  const closed = String(a.IsFullClosure).toLowerCase() === "true";
-  return `
-    <div class="popup__cat" style="color:#F59E0B">
-      <span class="glyph-triangle" style="border-bottom-color:#F59E0B"></span>GDOT 511 · ${escapeHtml(prettyEvent(a.EventType))}
-    </div>
-    <div class="popup__type">${escapeHtml(titleish(a.RoadwayName))}${
-    closed ? ' <span class="popup__flag">Full closure</span>' : ""
-  }</div>
-    ${a.Description ? popRow("Details", a.Description) : ""}
-    ${a.Severity ? popRow("Severity", titleish(a.Severity)) : ""}
-    ${when ? popRow("Updated", when) : ""}
   `;
 }
 
@@ -353,26 +256,7 @@ export function timeAgo(ts) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function prettyEvent(e) {
-  const map = {
-    accidentsAndIncidents: "Incident",
-    closures: "Closure",
-    roadwork: "Roadwork",
-    specialEvents: "Special event",
-    weatherEvents: "Weather",
-  };
-  return map[e] || titleish(e || "Event");
-}
-
-function titleish(s) {
-  if (!s) return "";
-  return String(s)
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 function featureIntersectsMetro(f) {
-  // Cheap bbox test against metro Atlanta for geometry-bearing alerts.
   const b = [-85.0, 33.3, -83.9, 34.4];
   let hit = false;
   const scan = (coords) => {
@@ -387,12 +271,12 @@ function featureIntersectsMetro(f) {
   return hit;
 }
 
-function escapeHtml(s) {
+export function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
   });
 }
 
-function escapeAttr(s) {
+export function escapeAttr(s) {
   return escapeHtml(s).replace(/`/g, "&#96;");
 }

@@ -238,6 +238,26 @@ export class MapView {
     return rampColor(count, max);
   }
 
+  // Show/hide all crime-mode layers when switching top-level modes.
+  setModeVisible(on) {
+    if (on) {
+      if (this.heatOn && this.heatLayer) {
+        this.heatLayer.addTo(this.map);
+      } else {
+        this.markerLayer.addTo(this.map);
+        this.haloLayer.addTo(this.map);
+      }
+      if (this.choroplethOn && this.choroplethLayer) {
+        this.choroplethLayer.addTo(this.map);
+      }
+    } else {
+      this.map.removeLayer(this.markerLayer);
+      this.map.removeLayer(this.haloLayer);
+      if (this.heatLayer) this.map.removeLayer(this.heatLayer);
+      if (this.choroplethLayer) this.map.removeLayer(this.choroplethLayer);
+    }
+  }
+
   // ---------- Viewport helpers ----------
 
   incidentsInView() {
