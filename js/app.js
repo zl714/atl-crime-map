@@ -10,6 +10,7 @@ import {
 import { MapView } from "./mapview.js";
 import { Panel } from "./panel.js";
 import { Controls } from "./controls.js";
+import { LiveLayers, timeAgo } from "./live.js";
 
 const state = {
   incidents: [],
@@ -18,7 +19,7 @@ const state = {
   selectedHoodName: null,
 };
 
-let mapView, panel, controls;
+let mapView, panel, controls, live;
 let refreshQueued = false;
 
 async function init() {
@@ -91,6 +92,111 @@ function onDataReady(payload, hoods) {
   const loading = document.getElementById("loading");
   loading.classList.add("hidden");
   setTimeout(() => (loading.style.display = "none"), 400);
+
+  // Live layers load independently so a slow/failed live source never blocks
+  // the core incident map.
+  live = new LiveLayers(mapView.map, renderLive);
+  buildLiveToggles();
+  live.init();
+  setInterval(renderLive, 60000); // keep "updated Xm ago" fresh
+}
+
+// ---------- Live layers UI ----------
+const LIVE_KINDS = [
+  { id: "news", label: "News", glyph: "diamond" },
+  { id: "traffic", label: "Traffic", glyph: "triangle" },
+  { id: "weather", label: "Weather", glyph: "wx" },
+];
+
+function buildLiveToggles() {
+  const host = document.getElementById("live-toggles");
+  liveButtons = {};
+  for (const k of LIVE_KINDS) {
+    const btn = document.createElement("button");
+    btn.className = `chip chip--live chip--live-${k.id}`;
+    btn.setAttribute("aria-pressed", live.on[k.id] ? "true" : "false");
+    btn.innerHTML = `<span class="glyph-${k.glyph}"></span>${k.label}<span class="chip__count tnum"></span>`;
+    btn.addEventListener("click", () => {
+      const on = !live.on[k.id];
+      live.setLayer(k.id, on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      renderLive();
+    });
+    host.appendChild(btn);
+    liveButtons[k.id] = btn;
+  }
+}
+
+let liveButtons = {};
+
+function renderLive() {
+  if (!live) return;
+  const counts = live.counts();
+  for (const k of LIVE_KINDS) {
+    const c = liveButtons[k.id]?.querySelector(".chip__count");
+    if (c) c.textContent = counts[k.id] ? String(counts[k.id]) : "";
+  }
+
+  // Header LIVE indicator.
+  const stamp = document.getElementById("live-stamp");
+  const ind = document.getElementById("live-indicator");
+  if (live.lastFetch) {
+    ind.classList.add("is-live");
+    stamp.textContent = `updated ${timeAgo(live.lastFetch)}`;
+  } else {
+    stamp.textContent = "connecting…";
+  }
+
+  // Merged feed.
+  const feed = live.feed();
+  const host = document.getElementById("live-feed");
+  const total = counts.news + counts.traffic + counts.weather;
+  document.getElementById("live-count").textContent = total
+    ? `${total} active`
+    : "";
+  if (!feed.length) {
+    host.innerHTML =
+      '<div class="empty">No active live items right now, or layers are off.</div>';
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  for (const item of feed.slice(0, 30)) {
+    const row = document.createElement("button");
+    row.className = "live-item";
+    const when = item.ts ? timeAgo(item.ts) : "";
+    row.innerHTML = `
+      <span class="live-item__tag live-tag--${item.kind}">${tagLabel(item.kind)}</span>
+      <span class="live-item__body">
+        <span class="live-item__title">${esc(item.title || item.type || "")}</span>
+        <span class="live-item__meta">${esc(liveMeta(item))}</span>
+      </span>
+      <span class="live-item__when tnum">${when}</span>`;
+    if (item.lat != null) row.addEventListener("click", () => live.focus(item));
+    else row.classList.add("is-static");
+    frag.appendChild(row);
+  }
+  host.innerHTML = "";
+  host.appendChild(frag);
+}
+
+function tagLabel(kind) {
+  return kind === "news" ? "NEWS" : kind === "traffic" ? "TRAFFIC" : "WX";
+}
+
+function liveMeta(item) {
+  if (item.kind === "news") return item.source + (item.location_text ? ` · ${item.location_text}` : "");
+  if (item.kind === "traffic") return item.road ? titleWord(item.road) : "GDOT 511";
+  return item.summary || item.severity || "NWS";
+}
+
+function titleWord(s) {
+  return String(s).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
 }
 
 // Toggle a neighborhood selection (click same one again to clear).

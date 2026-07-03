@@ -1,0 +1,48 @@
+name: Refresh live news
+
+# Pulls Atlanta crime/public-safety news every 10 minutes, classifies +
+# geocodes each story, and commits data/live.json (+ geocache). The client
+# reads live.json from raw.githubusercontent.com, so these commits go live
+# WITHOUT a redeploy. Traffic (GDOT 511) and weather (NWS) are fetched
+# client-side and are not part of this job.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-live
+  cancel-in-progress: false
+
+jobs:
+  news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch news
+        run: python3 data/fetch_news.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/live.json data/geocache.json
+          if git diff --cached --quiet; then
+            echo "No live-data change; nothing to commit."
+            exit 0
+          fi
+          N=$(python3 -c "import json;print(json.load(open('data/live.json'))['news_count'])")
+          git commit -m "chore: refresh live news ($N items)"
+          # Another workflow (daily incident refresh) may have pushed; rebase.
+          git pull --rebase --autostash origin main || true
+          git push

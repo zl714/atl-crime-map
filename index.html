@@ -38,6 +38,11 @@
           </span>
         </div>
         <div class="header__spacer"></div>
+        <div class="live-indicator" id="live-indicator" title="Live layers: media reports, GDOT 511 traffic, NWS alerts">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span class="live-indicator__label">LIVE</span>
+          <span class="live-indicator__stamp" id="live-stamp">connecting…</span>
+        </div>
         <div class="header__stat">
           <span class="num tnum" id="header-total">—</span>
           <span class="eyebrow">Incidents loaded</span>
@@ -70,6 +75,21 @@
             <span class="kpi-firearm__num tnum" id="fire-count">0</span>
             <span class="kpi-firearm__label">Firearm-involved</span>
             <span class="kpi-firearm__pct tnum" id="fire-pct">—</span>
+          </div>
+        </div>
+
+        <div class="section section--live">
+          <div class="section__head">
+            <span class="eyebrow">Live · Atlanta</span>
+            <span class="eyebrow tnum" id="live-count"></span>
+          </div>
+          <div class="control-group control-group--live" id="live-toggles"></div>
+          <div class="live-feed" id="live-feed">
+            <div class="empty">Connecting to live sources…</div>
+          </div>
+          <div class="live-note">
+            Media reports are news headlines (not confirmed incidents) · Traffic:
+            GDOT 511 · Alerts: NWS
           </div>
         </div>
 
@@ -183,6 +203,15 @@
           </div>
           <div class="legend-row legend-row--firearm">
             <span class="legend-ring"></span> Firearm involved
+          </div>
+          <div class="legend-row legend-row--live">
+            <span class="glyph-diamond"></span> News (media report)
+          </div>
+          <div class="legend-row">
+            <span class="glyph-triangle"></span> Traffic (GDOT 511)
+          </div>
+          <div class="legend-row">
+            <span class="glyph-wx"></span> Weather alert (NWS)
           </div>
         </div>
 

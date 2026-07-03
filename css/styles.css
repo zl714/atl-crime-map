@@ -931,6 +931,243 @@ header {
   box-shadow: 0 0 0 1px var(--firearm);
 }
 
+/* ---------- Live indicator (header) ---------- */
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel-2);
+}
+
+.live-indicator__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  color: var(--text-dim);
+}
+
+.live-indicator.is-live .live-indicator__label {
+  color: var(--cat-violent);
+}
+
+.live-indicator__stamp {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #556074;
+}
+
+.live-indicator.is-live .live-dot {
+  background: var(--cat-violent);
+  box-shadow: 0 0 0 0 rgba(242, 54, 69, 0.6);
+  animation: livepulse 2s infinite;
+}
+
+@keyframes livepulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(242, 54, 69, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(242, 54, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(242, 54, 69, 0);
+  }
+}
+
+/* ---------- Live glyphs (shared: markers, legend, chips) ---------- */
+.glyph-diamond {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: #f59e0b;
+  transform: rotate(45deg);
+  border: 1px solid rgba(3, 7, 18, 0.7);
+  flex: none;
+}
+
+.glyph-triangle {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 12px solid #f59e0b;
+  filter: drop-shadow(0 0 1px rgba(3, 7, 18, 0.8));
+  flex: none;
+}
+
+.glyph-wx {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: rgba(242, 54, 69, 0.28);
+  border: 1px solid var(--cat-violent);
+  flex: none;
+}
+
+.live-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- Live section ---------- */
+.control-group--live {
+  background: transparent;
+  border: none;
+  padding: 0;
+  gap: var(--s2);
+  margin-bottom: var(--s3);
+  flex-wrap: wrap;
+}
+
+.chip--live {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  gap: 6px;
+}
+
+.chip--live[aria-pressed="true"] {
+  color: var(--text-head);
+  border-color: var(--border-strong);
+}
+
+.chip--live[aria-pressed="false"] {
+  opacity: 0.55;
+}
+
+.chip__count {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.chip--live .glyph-triangle {
+  border-bottom-width: 10px;
+  border-left-width: 6px;
+  border-right-width: 6px;
+}
+
+.live-feed {
+  display: flex;
+  flex-direction: column;
+  max-height: 232px;
+  overflow-y: auto;
+}
+
+.live-item {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 4px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font);
+  width: 100%;
+}
+
+.live-item.is-static {
+  cursor: default;
+}
+
+.live-item:hover:not(.is-static) {
+  background: var(--bg-panel-2);
+}
+
+.live-item__tag {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+
+.live-tag--news {
+  color: var(--accent);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.live-tag--traffic {
+  color: #ffb347;
+  border-color: rgba(255, 138, 40, 0.4);
+}
+
+.live-tag--weather {
+  color: var(--cat-violent);
+  border-color: rgba(242, 54, 69, 0.4);
+}
+
+.live-item__body {
+  min-width: 0;
+}
+
+.live-item__title {
+  display: block;
+  font-size: 12px;
+  color: var(--text-head);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.live-item__meta {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.live-item__when {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.live-note {
+  margin-top: var(--s3);
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.popup__link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.popup__link:hover {
+  text-decoration: underline;
+}
+
+.popup__wx {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-body);
+  line-height: 1.4;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
   #app {

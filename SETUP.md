@@ -9,6 +9,17 @@ regenerates `data/incidents.json`, and commits it **only if the data changed**.
 No secrets are required for the refresh itself — it uses the repo's built-in
 `GITHUB_TOKEN` (the workflow declares `permissions: contents: write`).
 
+## Live news refresh
+
+`.github/workflows/live.yml` runs every 10 minutes: it fetches Atlanta
+crime/public-safety news (WSB-TV, 11Alive, FOX5), classifies + geocodes each
+story (Nominatim, cached), and commits `data/live.json`. The client reads that
+file from `raw.githubusercontent.com`, so these commits appear on the live site
+**without a redeploy**. Also no secrets — stdlib + built-in `GITHUB_TOKEN`.
+
+Traffic (GDOT 511) and weather (NWS) layers are fetched in the browser directly
+(both send CORS headers), so they need no workflow and are always current.
+
 ## Deploys
 
 **Auto-deploy is already wired.** The Vercel project `atl-crime-map` is

@@ -19,6 +19,10 @@ agency.
 | --- | --- | --- |
 | ![Firearms only](docs/screenshot-firearm.png) | ![Choropleth](docs/screenshot-choropleth.png) | ![Heatmap](docs/screenshot-heatmap.png) |
 
+_Live layers (media reports, GDOT 511 traffic, NWS alerts) with the Live panel feed:_
+
+![Live layers](docs/screenshot-live.png)
+
 ## Data
 
 - **Source:** [Atlanta Police Department Open Data](https://opendata.atlantapd.org/) —
@@ -73,8 +77,49 @@ python3 data/fetch_incidents.py
   choropleth toggle.
 - **Incident popups** with offense, date, neighborhood, APD zone, place type,
   and a firearm-involved badge.
+- **Live situational layers** on top of the daily incident data (see below):
+  media reports (news), GDOT 511 traffic, and NWS weather alerts, each with its
+  own distinct glyph, a merged "Live" feed in the panel, per-layer toggles, and
+  a pulsing "LIVE · updated Xm ago" header indicator.
 - **Shareable views:** `?lat=&lon=&z=&heat=1&choro=1&firearm=1` deep-links to a
   specific location/zoom and pre-set layers/filters.
+
+## Live layers
+
+Atlanta publishes **no** real-time CAD/911 feed, so nothing here pretends to be
+one. Instead, three genuinely live public sources sit on top of the daily NIBRS
+incidents. Each uses a distinct map glyph so it is never confused with a NIBRS
+incident bubble (a filled circle):
+
+| Layer | Glyph | Source | Fetch | Cadence |
+| --- | --- | --- | --- | --- |
+| **Media reports** (news) | amber diamond | WSB-TV, 11Alive, FOX5 Atlanta RSS | server-side cron → `data/live.json`, client reads it from `raw.githubusercontent.com` | every 10 min |
+| **Traffic** | triangle (amber/red by severity) | GDOT 511 Events Public View (ArcGIS, GEMA-hosted) | client-side (CORS) | live on load + every 3 min |
+| **Weather alerts** | severity-shaded polygon | `api.weather.gov` active alerts | client-side (CORS) | live on load + every 3 min |
+
+**Why this split.** `api.weather.gov` and the GDOT 511 ArcGIS service both send
+`Access-Control-Allow-Origin: *`, so the browser fetches them directly — always
+current. News RSS is CORS-blocked and needs geocoding, so a GitHub Action
+(`.github/workflows/live.yml`) fetches + processes it every 10 minutes and
+commits `data/live.json`. The client reads that file from
+`raw.githubusercontent.com/zl714/atl-crime-map/main/data/live.json` (CORS `*`,
+~5-min CDN cache), so **cron updates appear without any redeploy** (falling back
+to the same-origin copy if raw is unreachable).
+
+**News processing (`data/fetch_news.py`).** Runs in CI with the Python standard
+library only — no API key. Each story is classified as an incident by a
+transparent keyword matcher, a location is extracted (Atlanta neighborhood /
+city / county / highway / street gazetteer), and geocoded with **Nominatim**
+(≤1 req/sec, results cached in `data/geocache.json` so repeat headlines are not
+re-queried). An LLM step (e.g. `claude -p`) was considered per the original
+brief but rejected for the automated path: CI has no model access, and a tuned
+keyword + gazetteer + Nominatim pipeline is deterministic, free, and good enough
+for headline triage. Un-geocoded stories still appear in the feed, just without
+a map marker.
+
+**Honesty.** The news layer is labelled **"media reports"** everywhere, and every
+item keeps its source tag and a link to the original story. News headlines are
+not confirmed incidents and are presented as such.
 
 ## Firearm involvement — method
 
@@ -117,11 +162,14 @@ threshold, so the choropleth is enabled.
 
 ## Automation
 
-- `.github/workflows/refresh.yml` re-pulls the data daily (10:00 UTC) and
-  commits `data/incidents.json` when it changes.
-- The Vercel project is connected to this GitHub repo, so that push (and any
-  other push to `main`) auto-deploys to production. See
-  [`SETUP.md`](SETUP.md) for details and the token-based fallback.
+- `.github/workflows/refresh.yml` re-pulls the NIBRS incidents daily (10:00 UTC)
+  and commits `data/incidents.json` when it changes.
+- `.github/workflows/live.yml` re-pulls + geocodes news every 10 minutes and
+  commits `data/live.json` (read live from raw.githubusercontent, no redeploy
+  needed).
+- The Vercel project is connected to this GitHub repo, so pushes to `main`
+  auto-deploy to production. See [`SETUP.md`](SETUP.md) for details and the
+  token-based fallback.
 
 ## Time zone note
 
@@ -166,13 +214,20 @@ atl-crime-map/
 │   ├── data.js         # fetch incidents + neighborhoods, name normalization
 │   ├── mapview.js      # Leaflet map, bubbles, firearm halos, heat, choropleth
 │   ├── panel.js        # in-view stats, firearm KPI, top hoods, time grid, feed
+│   ├── live.js         # live layers: news, GDOT traffic, NWS weather + feed
 │   └── controls.js     # category / firearm / date / heat / choropleth controls
 ├── data/
-│   ├── incidents.json       # preprocessed incidents (generated, daily)
-│   ├── neighborhoods.geojson # 242 Atlanta neighborhood polygons
+│   ├── incidents.json        # preprocessed incidents (generated, daily)
+│   ├── neighborhoods.geojson  # 242 Atlanta neighborhood polygons
+│   ├── atl_counties.geojson   # 8 metro county polygons (for zone alerts)
+│   ├── live.json              # news feed (generated every 10 min)
+│   ├── geocache.json          # persisted Nominatim cache
 │   ├── fetch_incidents.py
+│   ├── fetch_news.py
 │   └── REFRESH.md
-├── .github/workflows/refresh.yml  # daily data refresh
+├── .github/workflows/
+│   ├── refresh.yml     # daily incident refresh
+│   └── live.yml        # 10-min news refresh
 ├── SETUP.md
 └── docs/               # screenshots
 ```
