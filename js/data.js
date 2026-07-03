@@ -1,6 +1,6 @@
 // Data loading + derived helpers for incident records.
 
-import { DATA_URL } from "./config.js";
+import { DATA_URL, NEIGHBORHOODS_URL, NEIGHBORHOOD_ALIAS } from "./config.js";
 
 export async function loadIncidents() {
   const res = await fetch(DATA_URL, { cache: "no-cache" });
@@ -12,6 +12,26 @@ export async function loadIncidents() {
     throw new Error("Incident data is malformed.");
   }
   return payload;
+}
+
+// Neighborhood boundaries are optional: if the file is missing or malformed we
+// degrade gracefully (table without choropleth) rather than break the app.
+export async function loadNeighborhoods() {
+  try {
+    const res = await fetch(NEIGHBORHOODS_URL, { cache: "no-cache" });
+    if (!res.ok) return null;
+    const gj = await res.json();
+    if (!gj || !Array.isArray(gj.features) || !gj.features.length) return null;
+    return gj;
+  } catch {
+    return null;
+  }
+}
+
+// Normalize a neighborhood label for joining incidents to boundary polygons.
+export function normHood(name) {
+  const key = (name || "").trim().toLowerCase();
+  return NEIGHBORHOOD_ALIAS[key] ? NEIGHBORHOOD_ALIAS[key].toLowerCase() : key;
 }
 
 // Newest incident timestamp (ms) — used as the anchor for date-range chips

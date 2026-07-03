@@ -1,16 +1,23 @@
-// Filter controls: category toggles, date-range chips, heat toggle.
+// Filter controls: category toggles, firearms-only, date chips, heat +
+// choropleth toggles.
 
-import { CATEGORIES, DATE_RANGES, DEFAULT_RANGE } from "./config.js";
+import { CATEGORIES, DATE_RANGES, DEFAULT_RANGE, FIREARM_COLOR } from "./config.js";
 
 export class Controls {
-  constructor({ onChange, onHeatToggle }) {
+  constructor({ onChange, onHeatToggle, onChoroplethToggle }) {
     this.onChange = onChange;
     this.onHeatToggle = onHeatToggle;
+    this.onChoroplethToggle = onChoroplethToggle;
     this.activeCats = new Set(CATEGORIES.map((c) => c.id));
     this.range = DEFAULT_RANGE;
+    this.firearmOnly = false;
+    this.heatOn = false;
+    this.choroplethOn = false;
     this._buildCategoryToggles();
+    this._buildFirearmChip();
     this._buildDateChips();
     this._buildHeatToggle();
+    this._buildChoroplethToggle();
   }
 
   _buildCategoryToggles() {
@@ -29,8 +36,7 @@ export class Controls {
 
   _toggleCat(id, btn) {
     if (this.activeCats.has(id)) {
-      // Keep at least one category active.
-      if (this.activeCats.size === 1) return;
+      if (this.activeCats.size === 1) return; // keep at least one active
       this.activeCats.delete(id);
       btn.setAttribute("aria-pressed", "false");
     } else {
@@ -38,6 +44,22 @@ export class Controls {
       btn.setAttribute("aria-pressed", "true");
     }
     this.onChange();
+  }
+
+  _buildFirearmChip() {
+    const host = document.getElementById("firearm-toggle-wrap");
+    const btn = document.createElement("button");
+    btn.className = "chip chip--firearm";
+    btn.id = "firearm-toggle";
+    btn.setAttribute("aria-pressed", "false");
+    btn.innerHTML = `<span class="chip__ring" style="border-color:${FIREARM_COLOR}"></span>Firearms only`;
+    btn.addEventListener("click", () => {
+      this.firearmOnly = !this.firearmOnly;
+      btn.setAttribute("aria-pressed", this.firearmOnly ? "true" : "false");
+      this.onChange();
+    });
+    host.appendChild(btn);
+    this.firearmButton = btn;
   }
 
   _buildDateChips() {
@@ -65,11 +87,20 @@ export class Controls {
 
   _buildHeatToggle() {
     const btn = document.getElementById("heat-toggle");
-    this.heatOn = false;
     btn.addEventListener("click", () => {
       this.heatOn = !this.heatOn;
       btn.setAttribute("aria-pressed", this.heatOn ? "true" : "false");
       this.onHeatToggle(this.heatOn);
+    });
+  }
+
+  _buildChoroplethToggle() {
+    const btn = document.getElementById("choropleth-toggle");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      this.choroplethOn = !this.choroplethOn;
+      btn.setAttribute("aria-pressed", this.choroplethOn ? "true" : "false");
+      this.onChoroplethToggle(this.choroplethOn);
     });
   }
 

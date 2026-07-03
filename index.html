@@ -49,12 +49,28 @@
         <div class="section">
           <div class="section__head">
             <span class="eyebrow">In current view</span>
+            <button
+              class="hood-selection"
+              id="hood-selection"
+              hidden
+              title="Clear neighborhood filter"
+            >
+              <span class="hood-selection__name"></span>
+              <span id="hood-selection__clear" class="hood-selection__x">✕</span>
+            </button>
           </div>
           <div class="total">
             <span class="num tnum" id="view-total">0</span>
             <span class="label">incidents</span>
           </div>
           <div class="total__hint" id="view-hint">Pan and zoom to filter the map.</div>
+
+          <div class="kpi-firearm" title="Incidents flagged firearm-involved by APD">
+            <span class="kpi-firearm__ring" aria-hidden="true"></span>
+            <span class="kpi-firearm__num tnum" id="fire-count">0</span>
+            <span class="kpi-firearm__label">Firearm-involved</span>
+            <span class="kpi-firearm__pct tnum" id="fire-pct">—</span>
+          </div>
         </div>
 
         <div class="section">
@@ -83,6 +99,30 @@
 
         <div class="section">
           <div class="section__head">
+            <span class="eyebrow">Top neighborhoods</span>
+            <span class="eyebrow">in view</span>
+          </div>
+          <div id="top-hoods">
+            <div class="empty">No mapped neighborhoods in view.</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section__head">
+            <span class="eyebrow">When incidents happen</span>
+            <span class="eyebrow tnum" id="time-grid-peak"></span>
+          </div>
+          <div class="time-grid" id="time-grid"></div>
+          <div class="time-grid__legend">
+            <span>Fewer</span>
+            <span class="time-grid__scale" aria-hidden="true"></span>
+            <span>More</span>
+            <span class="time-grid__note">day of week × hour, Atlanta time</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section__head">
             <span class="eyebrow">Recent incidents</span>
             <span class="eyebrow tnum" id="recent-count"></span>
           </div>
@@ -92,6 +132,10 @@
         </div>
 
         <div class="panel__footer">
+          <div class="footer-stamp">
+            <span class="footer-dot" aria-hidden="true"></span>
+            <span id="data-updated" class="tnum">Data updated —</span>
+          </div>
           Source:
           <a
             href="https://opendata.atlantapd.org/"
@@ -110,9 +154,13 @@
       <div id="map">
         <div class="controls">
           <div class="control-group" id="cat-toggles" role="group" aria-label="Category filters"></div>
+          <div class="control-group" id="firearm-toggle-wrap" role="group" aria-label="Firearm filter"></div>
           <div class="control-group" id="date-chips" role="group" aria-label="Date range"></div>
           <div class="controls__spacer"></div>
           <div class="control-group">
+            <button class="chip chip--toggle" id="choropleth-toggle" aria-pressed="false">
+              Neighborhoods
+            </button>
             <button class="chip chip--toggle" id="heat-toggle" aria-pressed="false">
               Heatmap
             </button>
@@ -133,6 +181,18 @@
           <div class="legend-row">
             <span class="cat-dot" style="background: var(--cat-other)"></span> Other
           </div>
+          <div class="legend-row legend-row--firearm">
+            <span class="legend-ring"></span> Firearm involved
+          </div>
+        </div>
+
+        <div class="legend legend--choropleth" id="choropleth-legend" hidden>
+          <span class="eyebrow">Incidents by neighborhood</span>
+          <div class="choropleth-scale" aria-hidden="true"></div>
+          <div class="choropleth-scale__labels">
+            <span>Fewer</span><span>More</span>
+          </div>
+          <div class="legend-note">Shaded by filtered incident count. Click a neighborhood to focus.</div>
         </div>
 
         <div id="loading">

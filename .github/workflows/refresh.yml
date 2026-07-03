@@ -1,0 +1,50 @@
+name: Refresh crime data
+
+# Pulls the latest ~180 days of APD incidents once a day and commits the
+# regenerated data/incidents.json if anything changed. Because the Vercel
+# project is connected to this GitHub repo, the resulting push auto-deploys.
+on:
+  schedule:
+    - cron: "0 10 * * *" # 10:00 UTC daily (~5-6am Atlanta)
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install timezone data
+        # fetch_incidents.py uses zoneinfo (stdlib); tzdata guarantees the
+        # America/New_York database is present on minimal runners.
+        run: pip install --quiet tzdata
+
+      - name: Fetch latest incidents
+        run: python3 data/fetch_incidents.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- data/incidents.json; then
+            echo "No change in incident data; nothing to commit."
+            exit 0
+          fi
+          RETRIEVED=$(python3 -c "import json;print(json.load(open('data/incidents.json'))['meta']['retrieved'])")
+          COUNT=$(python3 -c "import json;print(json.load(open('data/incidents.json'))['meta']['count'])")
+          git add data/incidents.json
+          git commit -m "chore: refresh APD incident data ($RETRIEVED, $COUNT records)"
+          git push

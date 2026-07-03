@@ -43,6 +43,11 @@
   box-sizing: border-box;
 }
 
+/* Ensure [hidden] wins over component display rules (.legend, .hood-selection). */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -621,6 +626,309 @@ header {
   color: var(--cat-violent);
   border: 1px solid rgba(242, 54, 69, 0.4);
   background: rgba(242, 54, 69, 0.08);
+}
+
+/* ---------- Firearm KPI ---------- */
+:root {
+  --firearm: #ff5a1f;
+}
+
+.kpi-firearm {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: var(--s4);
+  padding: var(--s3) var(--s4);
+  background: rgba(255, 90, 31, 0.08);
+  border: 1px solid rgba(255, 90, 31, 0.28);
+  border-radius: var(--r-md);
+}
+
+.kpi-firearm__ring {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2.5px solid var(--firearm);
+  flex: none;
+  box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.16);
+}
+
+.kpi-firearm__num {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ff8f5e;
+}
+
+.kpi-firearm__label {
+  font-size: 12px;
+  color: var(--text-body);
+}
+
+.kpi-firearm__pct {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Firearms-only chip */
+.chip--firearm[aria-pressed="true"] {
+  background: rgba(255, 90, 31, 0.14);
+  color: #ff8f5e;
+  border-color: rgba(255, 90, 31, 0.4);
+}
+
+.chip__ring {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--firearm);
+  flex: none;
+  opacity: 0.5;
+}
+
+.chip--firearm[aria-pressed="true"] .chip__ring {
+  opacity: 1;
+}
+
+/* ---------- Neighborhood selection chip ---------- */
+.hood-selection {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px 2px 9px;
+  font-family: var(--font);
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.hood-selection__x {
+  font-size: 11px;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.hood-selection:hover .hood-selection__x {
+  opacity: 1;
+}
+
+/* ---------- Top neighborhoods ---------- */
+#top-hoods {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hood-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: var(--s3);
+  padding: 6px var(--s2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font);
+  width: 100%;
+}
+
+.hood-row:hover {
+  background: var(--bg-panel-2);
+}
+
+.hood-row.is-active {
+  background: var(--accent-dim);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.hood-rank {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-head);
+  text-align: right;
+}
+
+.hood-body {
+  min-width: 0;
+}
+
+.hood-name {
+  display: block;
+  font-size: 12px;
+  color: var(--text-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.hood-bar {
+  display: block;
+  height: 4px;
+  background: var(--bg-elev);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.hood-bar__fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.7;
+}
+
+.hood-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: 11px;
+}
+
+.hood-fire {
+  color: var(--firearm);
+  white-space: nowrap;
+}
+
+.trend {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend.up {
+  color: var(--cat-violent);
+}
+
+.trend.down {
+  color: #4ea3ff;
+}
+
+.trend.flat {
+  color: var(--text-dim);
+}
+
+/* ---------- Time grid (DOW x hour) ---------- */
+.time-grid {
+  display: grid;
+  grid-template-columns: 26px repeat(24, 1fr);
+  gap: 2px;
+}
+
+.tg-corner {
+  height: 11px;
+}
+
+.tg-hlabel {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: left;
+  line-height: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tg-dlabel {
+  font-size: 10px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  height: 12px;
+}
+
+.tg-cell {
+  height: 12px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.time-grid__legend {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s3);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.time-grid__scale {
+  width: 70px;
+  height: 7px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #1e293b, #f59e0b 65%, #f23645);
+}
+
+.time-grid__note {
+  margin-left: auto;
+}
+
+/* ---------- Footer stamp ---------- */
+.footer-stamp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--s3);
+  color: var(--text-body);
+  font-size: 12px;
+}
+
+.footer-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+/* ---------- Legend additions ---------- */
+.legend-row--firearm {
+  margin-top: 3px;
+  padding-top: 5px;
+  border-top: 1px solid var(--border);
+}
+
+.legend-ring {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--firearm);
+  flex: none;
+}
+
+.legend--choropleth {
+  bottom: var(--s5);
+  right: auto;
+  left: var(--s4);
+  max-width: 220px;
+}
+
+.choropleth-scale {
+  height: 8px;
+  border-radius: 4px;
+  margin-top: 2px;
+  background: linear-gradient(90deg, #132033, #1e3050, #7a5a34, #b67a22, #f59e0b);
+}
+
+.choropleth-scale__labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.legend-note {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.recent-item.has-firearm .recent-item__stripe {
+  box-shadow: 0 0 0 1px var(--firearm);
 }
 
 /* ---------- Responsive ---------- */

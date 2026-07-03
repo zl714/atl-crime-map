@@ -1,7 +1,14 @@
-// Leaflet map: canvas-rendered incident bubbles, filtering, heat layer.
+// Leaflet map: canvas-rendered incident bubbles, firearm halos, filtering,
+// heat layer, and a neighborhood choropleth.
 
-import { MAP, CATEGORY_COLOR, CATEGORY_LABEL } from "./config.js";
-import { formatDate, titleCase } from "./data.js";
+import {
+  MAP,
+  CATEGORY_COLOR,
+  CATEGORY_LABEL,
+  FIREARM_COLOR,
+  CHOROPLETH_STOPS,
+} from "./config.js";
+import { formatDate, titleCase, normHood } from "./data.js";
 
 const TILE_URL =
   "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -28,15 +35,31 @@ export class MapView {
       maxZoom: 19,
     }).addTo(this.map);
 
-    // Dedicated canvas renderer keeps ~30k markers smooth.
-    this.renderer = L.canvas({ padding: 0.5 });
+    // Panes so choropleth sits under bubbles, and firearm halos sit under the
+    // colored bubble but above other bubbles.
+    this.map.createPane("choroplethPane").style.zIndex = 350;
+    this.map.createPane("haloPane").style.zIndex = 401;
+    this.map.createPane("bubblePane").style.zIndex = 402;
+
+    this.bubbleRenderer = L.canvas({ pane: "bubblePane", padding: 0.5 });
+    this.haloRenderer = L.canvas({ pane: "haloPane", padding: 0.5 });
+
+    this.haloLayer = L.layerGroup().addTo(this.map);
     this.markerLayer = L.layerGroup().addTo(this.map);
+    this.choroplethLayer = null;
     this.heatLayer = null;
+
     this.heatOn = false;
+    this.choroplethOn = false;
 
     this.incidents = [];
-    this.markers = []; // { inc, marker, shown }
+    this.markers = []; // { inc, marker, halo, shown }
     this.latestTs = Date.now();
+    this._filtered = [];
+
+    this.hoodByKey = new Map(); // normalized name -> Leaflet layer
+    this.selectedHood = null;
+    this.onSelectHood = null;
 
     this._onMove = onMove;
     this.map.on("moveend zoomend", () => this._onMove && this._onMove());
@@ -57,34 +80,57 @@ export class MapView {
 
     for (const inc of incidents) {
       const color = CATEGORY_COLOR[inc.cat] || CATEGORY_COLOR.other;
+      const radius = this._radiusFor(inc);
       const marker = L.circleMarker([inc.lat, inc.lon], {
-        renderer: this.renderer,
-        radius: this._radiusFor(inc),
-        color: color,
+        renderer: this.bubbleRenderer,
+        radius,
+        color,
         weight: 1,
         opacity: 0.9,
         fillColor: color,
         fillOpacity: 0.42,
       });
       marker.bindPopup(() => buildPopup(inc), { closeButton: true });
-      this.markers.push({ inc, marker, shown: false });
+
+      // Firearm-involved incidents get a bright red-orange ring that reads
+      // against any category color, at any zoom.
+      let halo = null;
+      if (inc.firearm) {
+        halo = L.circleMarker([inc.lat, inc.lon], {
+          renderer: this.haloRenderer,
+          radius: radius + 3.5,
+          color: FIREARM_COLOR,
+          weight: 2.5,
+          opacity: 0.95,
+          fill: false,
+          interactive: false,
+        });
+      }
+      this.markers.push({ inc, marker, halo, shown: false });
     }
   }
 
-  // Apply category + date filters. activeCats is a Set of category ids.
-  applyFilters(activeCats, minTs) {
+  // Apply category + date + firearm-only + neighborhood filters.
+  applyFilters(activeCats, minTs, firearmOnly, selectedHoodKey) {
+    this.selectedHood = selectedHoodKey || null;
     const filtered = [];
     for (const m of this.markers) {
       const inc = m.inc;
-      const match = activeCats.has(inc.cat) && inc.ts >= minTs;
+      const match =
+        activeCats.has(inc.cat) &&
+        inc.ts >= minTs &&
+        (!firearmOnly || inc.firearm) &&
+        (!selectedHoodKey || normHood(inc.hood) === selectedHoodKey);
       if (match) {
         filtered.push(inc);
         if (!m.shown) {
           this.markerLayer.addLayer(m.marker);
+          if (m.halo) this.haloLayer.addLayer(m.halo);
           m.shown = true;
         }
       } else if (m.shown) {
         this.markerLayer.removeLayer(m.marker);
+        if (m.halo) this.haloLayer.removeLayer(m.halo);
         m.shown = false;
       }
     }
@@ -120,13 +166,80 @@ export class MapView {
       this._renderHeat(this._filtered || []);
       this.heatLayer.addTo(this.map);
       this.map.removeLayer(this.markerLayer);
+      this.map.removeLayer(this.haloLayer);
     } else {
       if (this.heatLayer) this.map.removeLayer(this.heatLayer);
       this.markerLayer.addTo(this.map);
+      this.haloLayer.addTo(this.map);
     }
   }
 
-  // Incidents currently inside the viewport (from the active filtered set).
+  // ---------- Neighborhoods / choropleth ----------
+
+  setNeighborhoods(geojson, onSelectHood) {
+    this.onSelectHood = onSelectHood;
+    this.choroplethLayer = L.geoJSON(geojson, {
+      pane: "choroplethPane",
+      style: () => baseHoodStyle(),
+      onEachFeature: (feature, layer) => {
+        const name = feature.properties.NhoodName;
+        const key = normHood(name);
+        this.hoodByKey.set(key, layer);
+        layer.on("click", () => this.onSelectHood && this.onSelectHood(name));
+        layer.on("mouseover", () => {
+          if (this.choroplethOn && normHood(name) !== this.selectedHood) {
+            layer.setStyle({ weight: 1.2, color: "rgba(245,158,11,0.6)" });
+          }
+        });
+        layer.on("mouseout", () => {
+          if (this.choroplethOn) this._restyleHood(layer, name);
+        });
+      },
+    });
+  }
+
+  hasNeighborhoods() {
+    return !!this.choroplethLayer;
+  }
+
+  setChoropleth(on) {
+    if (!this.choroplethLayer) return;
+    this.choroplethOn = on;
+    if (on) this.choroplethLayer.addTo(this.map);
+    else this.map.removeLayer(this.choroplethLayer);
+  }
+
+  // Recolor polygons by in-view incident counts (sequential ramp).
+  updateChoropleth(countsByKey) {
+    if (!this.choroplethLayer) return;
+    this._countsByKey = countsByKey;
+    let max = 1;
+    for (const v of countsByKey.values()) if (v > max) max = v;
+    this._choroMax = max;
+    this.choroplethLayer.eachLayer((layer) => {
+      const name = layer.feature.properties.NhoodName;
+      this._restyleHood(layer, name);
+    });
+  }
+
+  _restyleHood(layer, name) {
+    const key = normHood(name);
+    const count = (this._countsByKey && this._countsByKey.get(key)) || 0;
+    const selected = this.selectedHood === key;
+    layer.setStyle(hoodStyle(count, this._choroMax || 1, selected));
+  }
+
+  fitHood(name) {
+    const layer = this.hoodByKey.get(normHood(name));
+    if (layer) this.map.fitBounds(layer.getBounds(), { padding: [40, 40] });
+  }
+
+  choroplethColor(count, max) {
+    return rampColor(count, max);
+  }
+
+  // ---------- Viewport helpers ----------
+
   incidentsInView() {
     const bounds = this.map.getBounds();
     const src = this._filtered || [];
@@ -143,6 +256,47 @@ export class MapView {
     });
   }
 }
+
+// ---------- Choropleth styling ----------
+
+function baseHoodStyle() {
+  return {
+    color: "rgba(255,255,255,0.10)",
+    weight: 0.6,
+    fillColor: "#132033",
+    fillOpacity: 0.0,
+  };
+}
+
+function rampColor(count, max) {
+  if (count <= 0) return CHOROPLETH_STOPS[0];
+  // Perceptual-ish: sqrt so mid counts aren't washed out by a few hotspots.
+  const t = Math.sqrt(count / max);
+  const idx = Math.min(
+    CHOROPLETH_STOPS.length - 1,
+    1 + Math.floor(t * (CHOROPLETH_STOPS.length - 1))
+  );
+  return CHOROPLETH_STOPS[idx];
+}
+
+function hoodStyle(count, max, selected) {
+  if (selected) {
+    return {
+      color: "#F59E0B",
+      weight: 2,
+      fillColor: rampColor(count, max),
+      fillOpacity: 0.72,
+    };
+  }
+  return {
+    color: "rgba(255,255,255,0.12)",
+    weight: 0.6,
+    fillColor: rampColor(count, max),
+    fillOpacity: count > 0 ? 0.62 : 0.12,
+  };
+}
+
+// ---------- Popup ----------
 
 function buildPopup(inc) {
   const color = CATEGORY_COLOR[inc.cat] || CATEGORY_COLOR.other;
@@ -161,7 +315,7 @@ function buildPopup(inc) {
   rows.push(row("Date", formatDate(inc.date)));
 
   const flag = inc.firearm
-    ? '<div class="popup__flag">Firearm involved</div>'
+    ? '<div class="popup__flag">● Firearm involved</div>'
     : "";
 
   return `

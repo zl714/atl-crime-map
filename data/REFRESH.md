@@ -40,18 +40,35 @@ What the script does:
   to `other` (this currently includes drug/narcotic, weapon-law, animal-cruelty,
   and "All Other Offenses").
 
+## Time zone
+
+`OccurredFromDate` is returned as a true-UTC epoch (ms). The script converts it
+to **America/New_York** (`zoneinfo`) before deriving `date`, `dow`, and `hour`,
+so the app's temporal analytics use Atlanta local wall-clock time. This was
+validated against APD's own `Day_of_the_week` field: Eastern-derived day matches
+100% of sampled records vs 79.5% for a naive UTC read.
+
 ## Field reference (source layer)
 
-| Source field       | Used as        | Notes                                  |
-| ------------------ | -------------- | -------------------------------------- |
-| `OccurredFromDate` | `date` / `ts`  | Epoch ms; incident occurrence time     |
-| `NIBRS_Bucket`     | `type` / `cat` | Coarse offense class → category        |
-| `NIBRS_Offense`    | `offense`      | Specific offense (popup detail)        |
-| `Crime_Against`    | —              | Person / Property / Society            |
-| `FireArmInvolved`  | `firearm`      | Flagged in popup + recent list         |
-| `NhoodName`        | `hood`         | Neighborhood                           |
-| `NPU`              | `npu`          | Neighborhood Planning Unit             |
-| `Zone`             | `zone`         | APD patrol zone                        |
-| `StreetAddress`    | `addr`         | House number redacted by APD           |
-| `LocationType`     | `loc`          | e.g. RESIDENCE_HOME                    |
-| `Latitude`/`Longitude` | `lat`/`lon` | WGS84                                 |
+| Source field       | Used as             | Notes                                  |
+| ------------------ | ------------------- | -------------------------------------- |
+| `OccurredFromDate` | `date`/`ts`/`dow`/`hour` | Epoch ms (UTC) → Eastern date, weekday (0=Mon), hour (0-23) |
+| `NIBRS_Bucket`     | `type` / `cat`      | Coarse offense class → category        |
+| `NIBRS_Offense`    | `offense`           | Specific offense (popup detail)        |
+| `Crime_Against`    | —                   | Person / Property / Society            |
+| `FireArmInvolved`  | `firearm`           | Ring on bubble, KPI, filter, popup, table |
+| `NhoodName`        | `hood`              | Neighborhood (joins to boundary layer) |
+| `NPU`              | `npu`               | Neighborhood Planning Unit             |
+| `Zone`             | `zone`              | APD patrol zone                        |
+| `StreetAddress`    | `addr`              | House number redacted by APD           |
+| `LocationType`     | `loc`               | e.g. RESIDENCE_HOME                    |
+| `Latitude`/`Longitude` | `lat`/`lon`     | WGS84                                  |
+
+## Neighborhood boundaries
+
+`data/neighborhoods.geojson` (242 polygons) is a one-time export from the APD
+`neighborhood` FeatureServer and rarely changes. To refresh it:
+
+```bash
+curl -s "https://services3.arcgis.com/Et5Qfajgiyosiw4d/arcgis/rest/services/neighborhood/FeatureServer/0/query?where=1%3D1&outFields=NPU,NhoodName&returnGeometry=true&outSR=4326&geometryPrecision=5&maxAllowableOffset=0.0002&f=geojson" -o data/neighborhoods.geojson
+```
