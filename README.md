@@ -13,18 +13,18 @@ Built by **Zachary LeCroy** to demonstrate crime-analysis and GIS skills.
 Not affiliated with the City of Atlanta, the Atlanta Police Department, or any
 agency.
 
-![Atlanta Crime Intelligence Map](docs/screenshot.png)
+![Atlanta Crime Intelligence Map](docs/screenshot.jpg)
 
 The app has two top-level modes, switched instantly from the header (linkable as
 `#crime` / `#traffic`):
 
 _Traffic mode — live GDOT 511 roadway events with its own intel panel; optional camera layer traces the highway network:_
 
-![Traffic mode](docs/screenshot-traffic.png)
+![Traffic mode](docs/screenshot-traffic.jpg)
 
 | Firearm-only view | Neighborhood choropleth | Hotspot heatmap |
 | --- | --- | --- |
-| ![Firearms only](docs/screenshot-firearm.png) | ![Choropleth](docs/screenshot-choropleth.png) | ![Heatmap](docs/screenshot-heatmap.png) |
+| ![Firearms only](docs/screenshot-firearm.jpg) | ![Choropleth](docs/screenshot-choropleth.jpg) | ![Heatmap](docs/screenshot-heatmap.jpg) |
 
 ## Data
 
