@@ -187,13 +187,26 @@ function updateLiveIndicator() {
     ind.classList.remove("is-live");
     stamp.textContent = "connecting…";
   }
+  // Header stat follows the mode: crime shows loaded incidents, traffic shows
+  // active GDOT events (two unrelated big numbers side by side reads wrong).
+  const statNum = document.getElementById("header-total");
+  const statLabel = document.getElementById("header-stat-label");
+  if (statNum && statLabel) {
+    if (state.mode === "traffic") {
+      statNum.textContent = traffic.counts().incidents.toLocaleString();
+      statLabel.textContent = "Active events";
+    } else {
+      statNum.textContent = state.incidents.length.toLocaleString();
+      statLabel.textContent = "Incidents loaded";
+    }
+  }
   // Traffic mode: refresh the camera-toggle count label.
   if (state.mode === "traffic") {
     const btn = document.getElementById("camera-toggle");
     const c = btn && btn.querySelector(".chip__count");
     if (c) {
       const n = traffic.counts().cameras;
-      c.textContent = n ? String(n) : "";
+      c.textContent = n ? n.toLocaleString() : "";
     }
   }
 }

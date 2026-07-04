@@ -1390,11 +1390,38 @@ header {
 @media (max-width: 860px) {
   #app {
     grid-template-columns: 1fr;
-    grid-template-rows: var(--header-h) 40vh 1fr;
+    grid-template-rows: auto 40vh 1fr;
     grid-template-areas:
       "header"
       "map"
       "panel";
+  }
+
+  /* Grid children must be allowed to shrink below their intrinsic width,
+     otherwise the whole app clips offscreen on narrow viewports. */
+  header,
+  #panel,
+  #map {
+    min-width: 0;
+    max-width: 100vw;
+  }
+
+  /* Header wraps to two rows (brand + mode, then LIVE + stat) instead of
+     forcing a ~736px intrinsic width. */
+  header {
+    flex-wrap: wrap;
+    min-height: var(--header-h);
+    padding: var(--s2) var(--s3);
+    row-gap: var(--s1);
+  }
+
+  .brand {
+    overflow: hidden;
+  }
+
+  .brand__title {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   #panel {
@@ -1406,9 +1433,33 @@ header {
     display: none;
   }
 
+  /* Drop the source text so the LIVE pill and the stat share one header row. */
+  .live-indicator__source {
+    display: none;
+  }
+
   .controls {
     top: var(--s2);
     left: var(--s2);
     right: var(--s2);
+    /* Above the legend so every chip stays tappable on the short map. */
+    z-index: 1001;
+  }
+
+  /* Chips wrap fully within the viewport instead of running offscreen. */
+  .control-group {
+    flex-wrap: wrap;
+  }
+
+  .controls__row {
+    padding-left: 44px;
+  }
+
+  .time-grid {
+    max-width: 100%;
+  }
+
+  .leaflet-popup-content {
+    max-width: calc(100vw - 88px) !important;
   }
 }

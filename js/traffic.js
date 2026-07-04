@@ -40,7 +40,8 @@ export class TrafficView {
     map.createPane("cameraPane").style.zIndex = 406;
     map.createPane("trafficPane").style.zIndex = 412;
     this.trafficRenderer = L.canvas({ pane: "trafficPane" });
-    this.cameraRenderer = L.canvas({ pane: "cameraPane" });
+    // tolerance widens the click/tap hit area around each ~6px camera dot.
+    this.cameraRenderer = L.canvas({ pane: "cameraPane", tolerance: 6 });
 
     this.incidentLayer = L.layerGroup();
     this.cameraLayer = L.layerGroup();
@@ -297,28 +298,17 @@ function incidentPopup(a, st) {
 
 function cameraPopup(a) {
   const loc = a.location_description || `${titleish(a.route)} ${a.cross_street || ""}`;
-  // GDOT snapshot host is http-only, so an embedded <img> is blocked as mixed
-  // content on the HTTPS site; it falls back to the live 511 camera link.
-  const snap = a.url
-    ? `<img class="cam-snap" src="${escapeAttr(a.url)}" alt="camera snapshot"
-        onerror="this.style.display='none'">`
-    : "";
-  const view = a.url
-    ? `<a class="popup__link" href="${escapeAttr(cam511Link(a))}" target="_blank" rel="noopener">View live camera ↗</a>`
-    : "";
+  // GDOT snapshots are hosted http-only, so embedding them on the HTTPS site
+  // always fails as mixed content — no <img> here; the honest action is a
+  // link out to the 511 camera map (labeled as such, not as this camera).
+  const view = `<a class="popup__link" href="https://511ga.org/" target="_blank" rel="noopener">Cameras on 511ga.org ↗</a>`;
   return `
     <div class="popup__cat" style="color:#7C93B4">GDOT traffic camera</div>
     <div class="popup__type">${escapeHtml(loc)}</div>
     ${a.county ? popRow("County", a.county) : ""}
     ${a.dir ? popRow("Direction", dirText(a.dir)) : ""}
-    ${snap}
     ${view}
   `;
-}
-
-function cam511Link(a) {
-  // Prefer the https 511 camera page over the http snapshot host.
-  return "https://511ga.org/";
 }
 
 function popRow(k, v) {
@@ -335,13 +325,21 @@ function colorForLabel(label) {
 }
 
 function dirText(d) {
-  const map = { n: "Northbound", s: "Southbound", e: "Eastbound", w: "Westbound", ns: "Both directions" };
+  const map = {
+    n: "Northbound", s: "Southbound", e: "Eastbound", w: "Westbound",
+    nb: "Northbound", sb: "Southbound", eb: "Eastbound", wb: "Westbound",
+    ns: "Both directions", ew: "Both directions",
+  };
   return map[(d || "").toLowerCase()] || titleish(d);
 }
 
 function titleish(s) {
   if (!s) return "";
-  return String(s).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  return String(s)
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    // Road designations stay uppercase: SR 140, GA 400, US 78, I-85.
+    .replace(/\b(Sr|Ga|Us)(?=[- ]?\d)/g, (t) => t.toUpperCase());
 }
 
 function shorten(s, n) {

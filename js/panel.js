@@ -259,10 +259,13 @@ export class Panel {
       const flag = inc.firearm
         ? '<span class="recent-item__flag">◉ firearm</span>'
         : "";
+      const type = titleCase(inc.type);
       item.innerHTML = `
         <span class="recent-item__stripe" style="background:${color}"></span>
         <span class="recent-item__body">
-          <span class="recent-item__type">${escapeHtml(titleCase(inc.type))}${flag}</span>
+          <span class="recent-item__type">${escapeHtml(
+            !type || type === "Unknown" ? "Unclassified offense" : type
+          )}${flag}</span>
           <span class="recent-item__meta">${escapeHtml(hood)}</span>
         </span>
         <span class="recent-item__date tnum">${formatDate(inc.date)}</span>`;

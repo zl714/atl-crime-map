@@ -60,5 +60,6 @@ export function titleCase(str) {
   return str
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/_/g, " ");
+    .replace(/_/g, " ")
+    .replace(/\b(Ne|Nw|Se|Sw)\b/g, (d) => d.toUpperCase()); // "Edgewood Ave SE"
 }

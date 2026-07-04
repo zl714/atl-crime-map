@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page not found · Atlanta Crime Intelligence Map</title>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --bg-base: #030712;
+        --bg-panel: #0f172a;
+        --text-head: #f3f4f6;
+        --text-dim: #94a3b8;
+        --border: rgba(255, 255, 255, 0.08);
+        --accent: #f59e0b;
+        --accent-dim: rgba(245, 158, 11, 0.14);
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg-base);
+        color: var(--text-dim);
+        font-family: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        max-width: 420px;
+        padding: 32px;
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        text-align: center;
+      }
+      .mark {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        background: var(--accent);
+        box-shadow: 0 0 0 4px var(--accent-dim);
+        margin-bottom: 20px;
+      }
+      .code {
+        font-size: 13px;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-head);
+        letter-spacing: -0.01em;
+      }
+      p { margin: 0 0 24px; font-size: 14px; line-height: 1.5; }
+      a.btn {
+        display: inline-block;
+        padding: 9px 18px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #1a1204;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <span class="mark" aria-hidden="true"></span>
+      <div class="code">404 · Not found</div>
+      <h1>This page is off the map</h1>
+      <p>The address you followed doesn't exist. The Atlanta crime and traffic map is still live.</p>
+      <a class="btn" href="/">Back to the map</a>
+    </main>
+  </body>
+</html>

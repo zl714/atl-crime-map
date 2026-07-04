@@ -37,6 +37,15 @@ FEEDS = [
     ("FOX5 Atlanta", "https://www.fox5atlanta.com/rss/category/news"),
 ]
 
+# Non-crime sections: Atlanta stations file sports/entertainment recaps on the
+# same wire, and phrases like "shot" or "killed it" false-positive the keyword
+# classifier. Reject by URL section before classifying.
+SKIP_URL_RE = re.compile(
+    r"/(sports?|mlb|nfl|nba|nhl|mls|braves|falcons|hawks|entertainment|"
+    r"lifestyle|food|recipes|events|contests|deals|steals)(/|$)",
+    re.IGNORECASE,
+)
+
 # Keyword classifier: does a headline describe a crime / public-safety incident?
 CRIME_TERMS = [
     "shot", "shooting", "gunfire", "gunman", "gun ", "shots fired", "drive-by",
@@ -125,8 +134,10 @@ def extract_location(text, gazetteer):
     for name in gazetteer:
         if re.search(r"\b" + re.escape(name) + r"\b", text, re.IGNORECASE):
             return name
+    # Street-only matches count only when the story also names Atlanta, so a
+    # same-named road in another state can't slip into the metro feed.
     m = STREET_RE.search(text)
-    if m:
+    if m and re.search(r"\batlanta\b", text, re.IGNORECASE):
         return m.group(1)
     return None
 
@@ -220,6 +231,8 @@ def main():
             continue
         if r["dt"] and r["dt"] < cutoff:
             continue
+        if SKIP_URL_RE.search(urllib.parse.urlparse(r["link"]).path):
+            continue
         offense = classify(f"{r['title']} {r['desc']}")
         if not offense:
             continue
@@ -235,7 +248,14 @@ def main():
     located = 0
     for r in items:
         loc = extract_location(f"{r['title']}. {r['desc']}", gazetteer)
-        coord = geo.geocode(loc) if loc else None
+        # Geofence: the feed is labeled "Live · Atlanta", so stories that
+        # never name a metro-Atlanta place (Dearborn, I-45, Spalding...) are
+        # dropped instead of shown under an Atlanta banner.
+        if not loc:
+            continue
+        # A bare "Atlanta" mention can't be pinned to a point — geocoding it
+        # drops a misleading marker on downtown. Keep the item, skip the pin.
+        coord = None if loc.lower() == "atlanta" else geo.geocode(loc)
         if coord:
             located += 1
         news.append({

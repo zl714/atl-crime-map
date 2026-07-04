@@ -9,6 +9,30 @@
       content="Interactive crime intelligence map for the City of Atlanta, built on public Atlanta Police Department open data."
     />
 
+    <!-- Social cards -->
+    <meta property="og:title" content="Atlanta Crime Intelligence Map" />
+    <meta
+      property="og:description"
+      content="Interactive crime intelligence map for the City of Atlanta, built on public Atlanta Police Department open data."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://atl-crime-map.vercel.app/" />
+    <meta property="og:image" content="https://atl-crime-map.vercel.app/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Atlanta Crime Intelligence Map" />
+    <meta
+      name="twitter:description"
+      content="Interactive crime intelligence map for the City of Atlanta, built on public Atlanta Police Department open data."
+    />
+    <meta name="twitter:image" content="https://atl-crime-map.vercel.app/og.png" />
+
+    <!-- Icons -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -50,7 +74,7 @@
         </div>
         <div class="header__stat">
           <span class="num tnum" id="header-total">—</span>
-          <span class="eyebrow">Incidents loaded</span>
+          <span class="eyebrow" id="header-stat-label">Incidents loaded</span>
         </div>
       </header>
 

@@ -10,6 +10,17 @@ import {
 } from "./config.js";
 import { formatDate, titleCase, normHood } from "./data.js";
 
+// leaflet-heat calls getImageData on every redraw; opting its canvas into
+// willReadFrequently silences the Canvas2D readback console warning and
+// speeds up repeated reads. Scoped to the heat plugin's own canvas class.
+const _getContext = HTMLCanvasElement.prototype.getContext;
+HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+  if (type === "2d" && this.classList.contains("leaflet-heatmap-layer")) {
+    attrs = { ...(attrs || {}), willReadFrequently: true };
+  }
+  return _getContext.call(this, type, attrs);
+};
+
 const TILE_URL =
   "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const TILE_ATTR =
@@ -35,14 +46,18 @@ export class MapView {
       maxZoom: 19,
     }).addTo(this.map);
 
-    // Panes so choropleth sits under bubbles, and firearm halos sit under the
-    // colored bubble but above other bubbles.
-    this.map.createPane("choroplethPane").style.zIndex = 350;
+    // Panes: firearm halos sit under the colored bubble but above other
+    // bubbles. The choropleth pane sits ABOVE both bubble canvases — stacked
+    // full-map canvases swallow clicks meant for layers below them, so the
+    // polygons must be on top (SVG-rendered) to be clickable at all; bubbles
+    // are dimmed while it is on (see setChoropleth).
     this.map.createPane("haloPane").style.zIndex = 401;
     this.map.createPane("bubblePane").style.zIndex = 402;
+    this.map.createPane("choroplethPane").style.zIndex = 403;
 
     this.bubbleRenderer = L.canvas({ pane: "bubblePane", padding: 0.5 });
     this.haloRenderer = L.canvas({ pane: "haloPane", padding: 0.5 });
+    this.choroplethRenderer = L.svg({ pane: "choroplethPane" });
 
     this.haloLayer = L.layerGroup().addTo(this.map);
     this.markerLayer = L.layerGroup().addTo(this.map);
@@ -180,6 +195,7 @@ export class MapView {
     this.onSelectHood = onSelectHood;
     this.choroplethLayer = L.geoJSON(geojson, {
       pane: "choroplethPane",
+      renderer: this.choroplethRenderer,
       style: () => baseHoodStyle(),
       onEachFeature: (feature, layer) => {
         const name = feature.properties.NhoodName;
@@ -207,6 +223,10 @@ export class MapView {
     this.choroplethOn = on;
     if (on) this.choroplethLayer.addTo(this.map);
     else this.map.removeLayer(this.choroplethLayer);
+    // Fade the incident bubbles so the shading (now on top) stays readable.
+    const dim = on ? "0.35" : "";
+    this.map.getPane("bubblePane").style.opacity = dim;
+    this.map.getPane("haloPane").style.opacity = dim;
   }
 
   // Recolor polygons by in-view incident counts (sequential ramp).
@@ -321,7 +341,11 @@ function hoodStyle(count, max, selected) {
 function buildPopup(inc) {
   const color = CATEGORY_COLOR[inc.cat] || CATEGORY_COLOR.other;
   const label = CATEGORY_LABEL[inc.cat] || "Other";
-  const offense = titleCase(inc.offense || inc.type);
+  const rawOffense = titleCase(inc.offense || inc.type);
+  // APD leaves some NIBRS offenses blank/Unknown; say so instead of
+  // headlining the popup with a bare "Unknown".
+  const offense =
+    !rawOffense || rawOffense === "Unknown" ? "Unclassified offense" : rawOffense;
   const hood = inc.hood && inc.hood !== "Unknown" ? inc.hood : "";
   const addr = inc.addr ? titleCase(inc.addr) : "";
   const zone = inc.zone || "";

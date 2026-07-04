@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- LeCroy design system: navy panel, amber mark with glow ring -->
+  <rect width="32" height="32" rx="7" fill="#0F172A"/>
+  <rect x="5" y="5" width="22" height="22" rx="5" fill="none" stroke="#F59E0B" stroke-opacity="0.35" stroke-width="2"/>
+  <rect x="10.5" y="10.5" width="11" height="11" rx="3" fill="#F59E0B"/>
+</svg>
