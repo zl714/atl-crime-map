@@ -51,7 +51,7 @@ python3 data/fetch_incidents.py
 
 ## Features
 
-- **Dark full-screen map** (Leaflet + CartoDB `dark_all` tiles) centered on
+- **Dark full-screen map** (Leaflet; CARTO Dark Matter tiles when a free CARTO key is set in `js/config.js`, Esri Dark Gray Canvas otherwise) centered on
   Atlanta, canvas-rendered so ~30k points stay smooth.
 - **Color-coded incident bubbles** by offense category — violent, property,
   vehicle, other — subtly sized by recency (newer = larger). Categories are

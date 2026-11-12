@@ -3,6 +3,7 @@
 
 import {
   MAP,
+  BASEMAP,
   CATEGORY_COLOR,
   CATEGORY_LABEL,
   FIREARM_COLOR,
@@ -21,12 +22,52 @@ HTMLCanvasElement.prototype.getContext = function (type, attrs) {
   return _getContext.call(this, type, attrs);
 };
 
-const TILE_URL =
-  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const TILE_ATTR =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> ' +
-  '&copy; <a href="https://carto.com/attributions">CARTO</a> · ' +
-  "Data: Atlanta Police Dept. Open Data";
+const OSM_ATTR =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const DATA_ATTR = "Data: Atlanta Police Dept. Open Data";
+
+// CARTO Dark Matter (needs BASEMAP.cartoKey — see config.js).
+const CARTO_URL =
+  "https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png";
+const CARTO_ATTR =
+  OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a> · ' + DATA_ATTR;
+
+// Keyless fallback: Esri Dark Gray Canvas (base tiles + a label overlay).
+// Esri's cache stops at zoom 16, so deeper zooms upscale the z16 tiles.
+const ESRI_ROOT =
+  "https://services.arcgisonline.com/arcgis/rest/services/Canvas/";
+const ESRI_BASE_URL = ESRI_ROOT + "World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const ESRI_LABELS_URL = ESRI_ROOT + "World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
+const ESRI_ATTR =
+  'Tiles &copy; <a href="https://www.esri.com/">Esri</a> — Esri, HERE, Garmin, ' +
+  OSM_ATTR + " contributors · " + DATA_ATTR;
+const ESRI_MAX_NATIVE_ZOOM = 16;
+
+function addBasemap(map) {
+  const key = (BASEMAP && BASEMAP.cartoKey ? String(BASEMAP.cartoKey) : "").trim();
+  if (key) {
+    L.tileLayer(CARTO_URL + "?key=" + encodeURIComponent(key), {
+      attribution: CARTO_ATTR,
+      subdomains: "abcd",
+      maxZoom: 19,
+    }).addTo(map);
+    return;
+  }
+  L.tileLayer(ESRI_BASE_URL, {
+    attribution: ESRI_ATTR,
+    maxNativeZoom: ESRI_MAX_NATIVE_ZOOM,
+    maxZoom: 19,
+  }).addTo(map);
+  // Place names sit in their own pane above the tiles but below every data
+  // layer, and never intercept clicks meant for bubbles or polygons.
+  map.createPane("basemapLabels").style.zIndex = 250;
+  map.getPane("basemapLabels").style.pointerEvents = "none";
+  L.tileLayer(ESRI_LABELS_URL, {
+    pane: "basemapLabels",
+    maxNativeZoom: ESRI_MAX_NATIVE_ZOOM,
+    maxZoom: 19,
+  }).addTo(map);
+}
 
 export class MapView {
   constructor(elementId, onMove) {
@@ -40,11 +81,7 @@ export class MapView {
       attributionControl: true,
     });
 
-    L.tileLayer(TILE_URL, {
-      attribution: TILE_ATTR,
-      subdomains: "abcd",
-      maxZoom: 19,
-    }).addTo(this.map);
+    addBasemap(this.map);
 
     // Panes: firearm halos sit under the colored bubble but above other
     // bubbles. The choropleth pane sits ABOVE both bubble canvases — stacked

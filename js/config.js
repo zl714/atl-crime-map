@@ -36,6 +36,16 @@ export const MAP = {
   maxZoom: 18,
 };
 
+// Basemap. CARTO's raster basemaps now require a (free) API key; keyless
+// requests come back watermarked "API KEY REQUIRED". Paste a key from
+// https://carto.com/basemaps/apikey/ into cartoKey to use CARTO Dark Matter
+// (restrict the key to this site's domain — it is visible in the browser).
+// With no key the map uses Esri's keyless Dark Gray Canvas instead, so the
+// basemap is never watermarked either way.
+export const BASEMAP = {
+  cartoKey: "",
+};
+
 export const DATA_URL = "data/incidents.json";
 export const NEIGHBORHOODS_URL = "data/neighborhoods.geojson";
 
